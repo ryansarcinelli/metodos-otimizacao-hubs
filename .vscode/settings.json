@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "iomanip": "cpp",
+        "chrono": "cpp",
+        "ostream": "cpp",
+        "iostream": "cpp"
+    }
+}
