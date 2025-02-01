@@ -1,6 +1,6 @@
 #include <iostream>
 #include <fstream>
-#include <vector>
+#include <array>
 #include <string>
 #include <iomanip>
 #include <cmath>
@@ -8,57 +8,72 @@
 #include <cstdlib>
 #include <ctime>
 #include <chrono>
+<<<<<<< Updated upstream
 
+=======
+#include <algorithm>
+#include <cstring>
+>>>>>>> Stashed changes
 
 using namespace std;
 using namespace chrono;
 
+const int MAX_NOS = 20;
+const int NUM_HUBS = 4;
+
 struct Node {
-    double x, y; // Coordenadas x e y do nó
+    double x, y;
     long double dist;
 };
 
 struct Solucao {
-    double FO; 
-    vector<int> hubs;
+    double FO;
+    int hubs[NUM_HUBS];
 };
 
 Solucao clonarSolucao(const Solucao& solucaoOriginal) {
     Solucao novaSolucao;
-    novaSolucao.FO = solucaoOriginal.FO; // Clonando a FO
-    novaSolucao.hubs = solucaoOriginal.hubs; // Clonando os hubs
+    novaSolucao.FO = solucaoOriginal.FO;
+    memcpy(novaSolucao.hubs, solucaoOriginal.hubs, sizeof(solucaoOriginal.hubs));
     return novaSolucao;
 }
 
-// Função para ler a instância do arquivo
-vector<Node> lerArquivoEntrada(const string& nomeArquivo, int& numeroDeNos) {
+
+double matrizDistancias[MAX_NOS][MAX_NOS];
+Node nos[MAX_NOS];
+
+void lerArquivoEntrada(const string& nomeArquivo, Node nos[MAX_NOS]) {
     ifstream arquivo(nomeArquivo);
-    if (!arquivo.is_open()) {
-        cerr << "Erro ao abrir o arquivo: " << nomeArquivo << endl;
-        exit(1);
-    }
+    if (!arquivo.is_open()) exit(1);
 
-    arquivo >> numeroDeNos; // Lê o número de nós
-    vector<Node> nos;
+    int NUM_NOS;
+    arquivo >> NUM_NOS;
 
-    Node no;
-    for (int i = 0; i < numeroDeNos; ++i) {
-        arquivo >> no.x >> no.y; // Lê as coordenadas
-        nos.push_back(no);
+    arquivo >> std::fixed >> std::setprecision(6);
+
+    for (int i = 0; i < NUM_NOS; ++i) {
+        arquivo >> nos[i].x >> nos[i].y;
     }
 
     arquivo.close();
-    return nos;
 }
 
-// Função para exibir os nós
-void exibirNos(const vector<Node>& nos) {
-    cout << fixed << setprecision(8); // Define precisão de 8 casas decimais
-    for (size_t i = 0; i < nos.size(); ++i) {
-        cout << "Nó " << i + 1 << ": (" << nos[i].x << ", " << nos[i].y << ")" << endl;
+
+void criarArquivoDeSaida(Node nos[MAX_NOS], int NUM_NOS) {
+    ofstream arquivo("saida.txt");
+    if (!arquivo.is_open()) exit(1);
+
+    arquivo << NUM_NOS << endl;
+
+    arquivo << std::fixed << std::setprecision(6);
+    for (int i = 0; i < NUM_NOS; ++i) {
+        arquivo << nos[i].x << " " << nos[i].y << endl;
     }
+
+    arquivo.close();
 }
 
+<<<<<<< Updated upstream
 // Função para selecionar 4 hubs aleatórios
 vector<int> selecionarHubs(int numeroDeNos, int numeroDeHubs) {
     vector<int> hubs;
@@ -76,28 +91,27 @@ void exibirHubs(const vector<int>& hubs) {
     for (size_t i = 0; i < hubs.size(); ++i) {
         cout << hubs[i] << (i < hubs.size() - 1 ? ", " : "\n");
     }
+=======
+void heuristicaConstrutiva(int hubs[], int NUM_HUBS, int numeroDeHubs) {
+    memset(hubs, -1, sizeof(int) * numeroDeHubs);
+    for (int i = 0; i < numeroDeHubs; i++) hubs[i] = i;
+>>>>>>> Stashed changes
 }
 
 long double calcularDistancia(const Node& a, const Node& b) {
     return sqrt(pow(a.x - b.x, 2) + pow(a.y - b.y, 2));
 }
 
-vector<vector<double>> calcularMatrizDeDistancias(const vector<Node>& nodes) {
-    int n = nodes.size();
-    vector<vector<double>> distancias(n, vector<double>(n, 0.0)); // Inicializa a matriz com 0.0
-
-    // Calcular apenas a metade superior da matriz (evitando cálculos repetidos)
-    for (int i = 0; i < n; ++i) {
-        for (int j = i + 1; j < n; ++j) {
-            double distancia = calcularDistancia(nodes[i], nodes[j]);
-            distancias[i][j] = distancia; // Preenche a parte superior
-            distancias[j][i] = distancia; // Espelha na parte inferior
+void calcularMatrizDeDistancias(double matrizDistancias[MAX_NOS][MAX_NOS], Node nos[MAX_NOS], int MAX_NOS) {
+    for (int i = 0; i < MAX_NOS; ++i) {
+        for (int j = i + 1; j < MAX_NOS; ++j) { 
+            matrizDistancias[i][j] = calcularDistancia(nos[i], nos[j]);
+            matrizDistancias[j][i] = matrizDistancias[i][j];
         }
     }
-
-    return distancias;
 }
 
+<<<<<<< Updated upstream
 vector<double> dijkstra(int origem, const vector<vector<Edge>>& grafo) {
     int n = grafo.size();
     vector<double> distancia(n, numeric_limits<double>::max());
@@ -215,17 +229,37 @@ double calculoFOmat(const std::vector<Node>& nodes, const std::vector<int>& hubs
             }
 
             maxCost = std::max(maxCost, minCost); // Atualizar o maior custo t_ij encontrado
-        }
-    }
+=======
+void imprimirMatriz(double matrizDistancias[MAX_NOS][MAX_NOS], int MAX_NOS) {
+    std::cout << std::fixed << std::setprecision(6);
 
-    return maxCost;
+    for (int i = 0; i < MAX_NOS; ++i) {
+        for (int j = 0; j < MAX_NOS; ++j) {
+            std::cout << matrizDistancias[i][j] << " ";
+>>>>>>> Stashed changes
+        }
+        std::cout << std::endl;
+    }
 }
 
+<<<<<<< Updated upstream
 double calculoFOguloso(const std::vector<Node>& nodes, const std::vector<int>& hubs, const std::vector<std::vector<double>>& distancias) {
     const double beta = 1.0;
-    const double alpha = 0.75;
-    const double lambda = 1.0;
+=======
+void printHubs(int* hubs, int NUM_HUBS) {
+    std::cout << "Hubs selecionados: ";
+    for (int i = 0; i < NUM_HUBS; i++) {
+        std::cout << hubs[i] << " ";
+    }
+    std::cout << std::endl;
+}
 
+long double calculoFOmat2(int NUM_HUBS, int hubs[], double matrizDistancias[MAX_NOS][MAX_NOS]) {
+>>>>>>> Stashed changes
+    const double alpha = 0.75;
+    long double maxCost = 0.0;
+
+<<<<<<< Updated upstream
     long double maxCost = 0.0; // Armazena o maior custo t_ij
 
     for (int i = 0; i < nodes.size(); ++i) {
@@ -257,12 +291,27 @@ double calculoFOguloso(const std::vector<Node>& nodes, const std::vector<int>& h
             }
 
             maxCost = std::max(maxCost, minCost); // Atualiza o maior custo encontrado
+=======
+    for (int i = 0; i < NUM_HUBS; ++i) {
+        for (int j = i + 1; j < NUM_HUBS; ++j) {
+            long double minCost = std::numeric_limits<long double>::max();
+            for (int k = 0; k < NUM_HUBS; ++k) {
+                for (int l = 0; l < NUM_HUBS; ++l) {
+                    // Calcular o custo considerando os hubs e as distâncias
+                    long double cost = matrizDistancias[i][hubs[k]] + 
+                                       alpha * matrizDistancias[hubs[k]][hubs[l]] + 
+                                       matrizDistancias[hubs[l]][j];
+                    minCost = std::min(minCost, cost);
+                }
+            }
+            maxCost = std::max(maxCost, minCost);
+>>>>>>> Stashed changes
         }
     }
-
     return maxCost;
 }
 
+<<<<<<< Updated upstream
 double calculoFOgulosoAleatorio(const vector<Node>& nodes, int numeroDeHubs) {
     int numeroDeNos = nodes.size();
     vector<int> hubs;
@@ -308,47 +357,22 @@ double calculoFOGulosoVetor(vector<Node>& nodes, const vector<int>& hubs) {
     int n = nodes.size();  // Número de nós
     int numHubs = hubs.size();  // Número de hubs
     vector<Node> proximoNo(n); // Vetor para armazenar o nó mais próximo de cada nó
+=======
+>>>>>>> Stashed changes
 
-    // Inicializando a matriz de distâncias
-    vector<vector<long double>> distanciasDeHubParaNos(numHubs, vector<long double>(n)); // Distâncias de cada hub para todos os nós
-
-    // Calculando a menor distância de cada nó para um hub
-    for (int i = 0; i < n; ++i) {
-        long double menorDistancia = std::numeric_limits<long double>::max();
-        int hubMaisProximo = -1;
-
-        // Verifica a menor distância do nó i até qualquer hub
-        for (int j = 0; j < numHubs; ++j) {
-            int hub = hubs[j];  // Obtém o hub atual da lista de hubs
-            long double distancia = calcularDistancia(nodes[i], nodes[hub]); // Distância do nó i até o hub
-            if (distancia < menorDistancia) {
-                menorDistancia = distancia;
-                hubMaisProximo = hub; // Armazena o índice do hub mais próximo
-            }
-
-            // Agora, armazena a distância de cada hub para o nó i
-            distanciasDeHubParaNos[j][i] = distancia; // Armazenando a distância no vetor
-        }
-
-        // Agora, atribui o nó mais próximo ao vetor proximoNo
-        proximoNo[i] = nodes[hubMaisProximo]; // Armazenando o nó mais próximo no vetor proximoNo
-
-        // Agora, atribui a distância ao nó mais próximo
-        proximoNo[i].dist = menorDistancia; // Modificando diretamente o atributo 'dist' do nó mais próximo
-    }
-
-    // Agora, você pode usar o vetor 'proximoNo' e a distância armazenada diretamente nos nós.
-    // Para exemplo, você pode calcular a função objetivo:
+double calculoFOGulosoVetor(int NUM_HUBS, int hubs[]) {
     double funcaoObjetivo = 0.0;
-    for (int i = 0; i < n; ++i) {
-        if (proximoNo[i].dist != -1) {  // Verifica se a distância foi realmente calculada
-            funcaoObjetivo += proximoNo[i].dist;  // Aqui, você usa diretamente a distância salva
+    for (int i = 0; i < NUM_HUBS; ++i) {
+        long double menorDistancia = numeric_limits<long double>::max();
+        for (int j = 0; j < NUM_HUBS; ++j) {
+            menorDistancia = std::min(menorDistancia, static_cast<long double>(matrizDistancias[i][hubs[j]]));
         }
+        funcaoObjetivo += menorDistancia;
     }
-
-    return funcaoObjetivo; // Retorna o valor da função objetivo
+    return funcaoObjetivo;
 }
 
+<<<<<<< Updated upstream
 double calculoFOmat2(const std::vector<Node>& nodes, const std::vector<int>& hubs, const std::vector<std::vector<double>>& distancias) {
     const double beta = 1.0;
     const double alpha = 0.75;
@@ -429,10 +453,20 @@ int main() {
     string nomeArquivo = "inst20.txt"; 
     int numeroDeNos;
     int numeroDeHubs = 5;
+=======
+int main() {
+    string nomeArquivo = "inst20.txt";
+    int hubs[NUM_HUBS] = {3,5,13,16};
+>>>>>>> Stashed changes
 
-    // Lê os nós do arquivo
-    vector<Node> nos = lerArquivoEntrada(nomeArquivo, numeroDeNos);
+    lerArquivoEntrada(nomeArquivo, nos);
+    criarArquivoDeSaida(nos, MAX_NOS);
+    //heuristicaConstrutiva(hubs, NUM_HUBS, numeroDeHubs);
+    //printHubs(hubs, NUM_HUBS);
+    calcularMatrizDeDistancias(matrizDistancias, nos, MAX_NOS);
+    imprimirMatriz(matrizDistancias, MAX_NOS);
 
+<<<<<<< Updated upstream
     vector<int> hubs = { 3, 5, 13, 16};
 
     cout << "Número de Nós: " << numeroDeNos << endl;
@@ -444,67 +478,36 @@ int main() {
     // ============================
     // TESTE calculoFOmat2 (Matriz NOVA)
     // ============================
+=======
+>>>>>>> Stashed changes
     auto start3 = high_resolution_clock::now();
-    double result3 = 0.0;
-    for (int i = 0; i < 100; i++) {
-        vector<vector<double>> matrizDeDistancias = calcularMatrizDeDistancias(nos);
-        result3 = calculoFOmat2(nos, hubs, matrizDeDistancias);
+    long double result3 = 0.0;
+    for (int i = 0; i < 10000; i++) {
+        result3 = calculoFOmat2(NUM_HUBS, hubs, matrizDistancias);
     }
     auto end3 = high_resolution_clock::now();
     auto duration3 = duration_cast<microseconds>(end3 - start3);
-
     cout << "Maior custo - Matriz NOVA: " << fixed << setprecision(2) << result3 << endl;
     cout << "Tempo - Matriz NOVA: " << duration3.count() << " microssegundos" << endl;
 
-    // ============================
-    // TESTE calculoFOmatGuloso (Nova Heurística)
-    // ============================
-    auto start5 = high_resolution_clock::now();
-    double result5 = 0.0;
-    for (int i = 0; i < 100; i++) {
-        vector<vector<double>> matrizDeDistancias5 = calcularMatrizDeDistancias(nos);
-        result5 = calculoFOmatGuloso(nos, hubs, matrizDeDistancias5);
-    }
-    auto end5 = high_resolution_clock::now();
-    auto duration5 = duration_cast<microseconds>(end5 - start5);
-
-    cout << "Maior custo - Guloso DOIS: " << fixed << setprecision(2) << result5 << endl;
-    cout << "Tempo - Guloso DOIS: " << duration5.count() << " microssegundos" << endl;
-
-    // ============================
-    // TESTE calculoFOmatGuloso (Nova Heurística)
-    // ============================
     auto start = high_resolution_clock::now();
     double result = 0.0;
-    for (int i = 0; i < 100; i++) {
-        result = calculoFOGulosoVetor(nos, hubs);
+    for (int i = 0; i < 10000; i++) {
+        result = calculoFOGulosoVetor(NUM_HUBS, hubs);
     }
     auto end = high_resolution_clock::now();
     auto duration = duration_cast<microseconds>(end - start);
-
     cout << "Maior custo - Guloso VETOR: " << fixed << setprecision(2) << result << endl;
     cout << "Tempo - Guloso VETOR: " << duration.count() << " microssegundos" << endl;
 
     return 0;
 }
-
 /*
-    Parâmetro: instância a ser considerada e o número de hubs. ---
-
-    Procedimento ou função para leitura da instância. ---
-
-    Estruturas de dados necessárias para armazenar os dados de entrada. ---
-
-    Estruturas de dados para armazenar uma solução. O código deve ser capaz de armazenar ---
-várias soluções diferentes.
-
-    Procedimento ou função para criação de uma solução inicial viável para o problema ---
-(heurística construtiva). *
-
-    Procedimento ou função para clonar uma solução qualquer. ---
-
-    Procedimento ou função para calcular a função objetivo de uma solução qualquer. ** ---
-
-    Procedimento ou função para “escrever” (em tela e arquivo) uma solução qualquer no
-formato descrito na Figura 3. 
+void resultadoUMApHCP(){
+    printf("n: %i   ", MAX_NOS);
+    printf("p: %i", NUM_HUBS);
+    printf("FO: %f  ", );
+    printf("\n\n");
+    printf("");
+}
 */
