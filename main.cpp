@@ -92,7 +92,8 @@ void imprimirMatriz(double matrizDistancias[MAX_NOS][MAX_NOS], int MAX_NOS) {
 
     for (int i = 0; i < MAX_NOS; ++i) {
         for (int j = 0; j < MAX_NOS; ++j) {
-            std::cout << matrizDistancias[i][j] << " ";
+            if(i > j)
+                std::cout << matrizDistancias[i][j] << " ";
         }
         std::cout << std::endl;
     }
@@ -163,6 +164,7 @@ int main() {
     }
     auto end3 = high_resolution_clock::now();
     auto duration3 = duration_cast<microseconds>(end3 - start3);
+    cout << "-------------\n";
     cout << "Maior custo - Matriz NOVA: " << fixed << setprecision(2) << result3 << endl;
     cout << "Tempo - Matriz NOVA: " << duration3.count() << " microssegundos" << endl;
 
