@@ -45,7 +45,7 @@ void lerArquivoEntrada(const string& nomeArquivo, Node nos[MAX_NOS]) {
     int NUM_NOS;
     arquivo >> NUM_NOS;
 
-    arquivo >> std::fixed >> std::setprecision(6);
+    //arquivo >> std::fixed >> std::setprecision(6);
 
     for (int i = 0; i < NUM_NOS; ++i) {
         arquivo >> nos[i].x >> nos[i].y;
@@ -54,6 +54,10 @@ void lerArquivoEntrada(const string& nomeArquivo, Node nos[MAX_NOS]) {
     arquivo.close();
 }
 
+
+long double calcularDistancia(const Node& a, const Node& b) {
+    return sqrt(pow(a.x - b.x, 2) + pow(a.y - b.y, 2));
+}
 
 void criarArquivoDeSaida(Node nos[MAX_NOS], int NUM_NOS) {
     ofstream arquivo("saida.txt");
@@ -69,14 +73,45 @@ void criarArquivoDeSaida(Node nos[MAX_NOS], int NUM_NOS) {
     arquivo.close();
 }
 
+Node calcularCentro(Node nos[MAX_NOS]) {
+    double somaX = 0.0, somaY = 0.0;
+    
+    for (int i = 0; i < MAX_NOS; ++i) {
+        somaX += nos[i].x;
+        somaY += nos[i].y;
+    }
+    
+    return {somaX / MAX_NOS, somaY / MAX_NOS};
+}
+
+void selecionarHubs(Node nos[MAX_NOS], int hubs[], int NUM_HUBS) {
+    
+    Node centro = calcularCentro(nos);
+
+    std::pair<double, int> distancias[MAX_NOS];
+
+    for (int i = 0; i < MAX_NOS; ++i) {
+        double distanciaCentro = calcularDistancia(nos[i], centro);
+        distancias[i] = {distanciaCentro, i};
+    }
+
+    std::sort(distancias, distancias + MAX_NOS);
+
+    for (int i = 0; i < NUM_HUBS / 2; ++i) {
+        hubs[i] = distancias[i].second; 
+    }
+    for (int i = NUM_HUBS / 2; i < NUM_HUBS; ++i) {
+        hubs[i] = distancias[MAX_NOS - 1 - (i - NUM_HUBS / 2)].second; 
+    }
+}
+
+
+
 void heuristicaConstrutiva(int hubs[], int NUM_HUBS, int numeroDeHubs) {
     memset(hubs, -1, sizeof(int) * numeroDeHubs);
     for (int i = 0; i < numeroDeHubs; i++) hubs[i] = i;
 }
 
-long double calcularDistancia(const Node& a, const Node& b) {
-    return sqrt(pow(a.x - b.x, 2) + pow(a.y - b.y, 2));
-}
 
 void calcularMatrizDeDistancias(double matrizDistancias[MAX_NOS][MAX_NOS], Node nos[MAX_NOS], int MAX_NOS) {
     for (int i = 0; i <= MAX_NOS; ++i) {
@@ -133,28 +168,25 @@ long double calculoFOmat(int NUM_HUBS, int hubs[], double matrizDistancias[MAX_N
 
 
 
-double calculoFOGulosoVetor(int NUM_HUBS, int hubs[]) {
-    double funcaoObjetivo = 0.0;
-    for (int i = 0; i < NUM_HUBS; ++i) {
-        long double menorDistancia = numeric_limits<long double>::max();
-        for (int j = 0; j < NUM_HUBS; ++j) {
-            menorDistancia = std::min(menorDistancia, static_cast<long double>(matrizDistancias[i][hubs[j]]));
-        }
-        funcaoObjetivo += menorDistancia;
-    }
-    return funcaoObjetivo;
-}
-
 int main() {
     string nomeArquivo = "inst20.txt";
-    int hubs[NUM_HUBS] = {3,5,13,16};
+    int hubs[NUM_HUBS];
 
     lerArquivoEntrada(nomeArquivo, nos);
     criarArquivoDeSaida(nos, MAX_NOS);
     //heuristicaConstrutiva(hubs, NUM_HUBS, numeroDeHubs);
     //printHubs(hubs, NUM_HUBS);
     calcularMatrizDeDistancias(matrizDistancias, nos, MAX_NOS);
-    imprimirMatriz(matrizDistancias, MAX_NOS);
+    //imprimirMatriz(matrizDistancias, MAX_NOS);
+
+    selecionarHubs(nos, hubs, NUM_HUBS);
+
+    std::cout << "Hubs selecionados: ";
+    for (int i = 0; i < NUM_HUBS; ++i) {
+        std::cout << hubs[i] << " ";
+    }
+    std::cout << std::endl;
+
 
     auto start3 = high_resolution_clock::now();
     long double result3 = 0.0;
@@ -166,24 +198,5 @@ int main() {
     cout << "Maior custo - Matriz NOVA: " << fixed << setprecision(2) << result3 << endl;
     cout << "Tempo - Matriz NOVA: " << duration3.count() << " microssegundos" << endl;
 
-    auto start = high_resolution_clock::now();
-    double result = 0.0;
-    for (int i = 0; i < 10000; i++) {
-        result = calculoFOGulosoVetor(NUM_HUBS, hubs);
-    }
-    auto end = high_resolution_clock::now();
-    auto duration = duration_cast<microseconds>(end - start);
-    cout << "Maior custo - Guloso VETOR: " << fixed << setprecision(2) << result << endl;
-    cout << "Tempo - Guloso VETOR: " << duration.count() << " microssegundos" << endl;
-
     return 0;
 }
-/*
-void resultadoUMApHCP(){
-    printf("n: %i   ", MAX_NOS);
-    printf("p: %i", NUM_HUBS);
-    printf("FO: %f  ", );
-    printf("\n\n");
-    printf("");
-}
-*/
