@@ -62,7 +62,7 @@ void criarArquivoDeSaida(Node nos[MAX_NOS], int NUM_NOS) {
     arquivo << NUM_NOS << endl;
 
     arquivo << std::fixed << std::setprecision(6);
-    for (int i = 0; i < NUM_NOS; ++i) {
+    for (int i = 0; i <= NUM_NOS; ++i) {
         arquivo << nos[i].x << " " << nos[i].y << endl;
     }
 
@@ -79,7 +79,7 @@ long double calcularDistancia(const Node& a, const Node& b) {
 }
 
 void calcularMatrizDeDistancias(double matrizDistancias[MAX_NOS][MAX_NOS], Node nos[MAX_NOS], int MAX_NOS) {
-    for (int i = 0; i < MAX_NOS; ++i) {
+    for (int i = 0; i <= MAX_NOS; ++i) {
         for (int j = i + 1; j < MAX_NOS; ++j) { 
             matrizDistancias[i][j] = calcularDistancia(nos[i], nos[j]);
             matrizDistancias[j][i] = matrizDistancias[i][j];
@@ -106,27 +106,31 @@ void printHubs(int* hubs, int NUM_HUBS) {
     std::cout << std::endl;
 }
 
-long double calculoFOmat2(int NUM_HUBS, int hubs[], double matrizDistancias[MAX_NOS][MAX_NOS]) {
+long double calculoFOmat(int NUM_HUBS, int hubs[], double matrizDistancias[MAX_NOS][MAX_NOS]) {
     const double alpha = 0.75;
     long double maxCost = 0.0;
 
-    for (int i = 0; i < NUM_HUBS; ++i) {
-        for (int j = i + 1; j < NUM_HUBS; ++j) {
+    for (int i = 0; i < MAX_NOS; ++i) {
+        for (int j = i + 1; j < MAX_NOS; ++j) {
             long double minCost = std::numeric_limits<long double>::max();
             for (int k = 0; k < NUM_HUBS; ++k) {
                 for (int l = 0; l < NUM_HUBS; ++l) {
-                    // Calcular o custo considerando os hubs e as distâncias
                     long double cost = matrizDistancias[i][hubs[k]] + 
                                        alpha * matrizDistancias[hubs[k]][hubs[l]] + 
                                        matrizDistancias[hubs[l]][j];
+                     //std::cout << "Custo entre " << i << " e " << j << " com k=" << k << " e l=" << l << ": " << cost << std::endl;
+
                     minCost = std::min(minCost, cost);
                 }
             }
             maxCost = std::max(maxCost, minCost);
         }
     }
+    
+//    std::cout << "Maior custo calculado: " << maxCost << std::endl;
     return maxCost;
 }
+
 
 
 double calculoFOGulosoVetor(int NUM_HUBS, int hubs[]) {
@@ -155,7 +159,7 @@ int main() {
     auto start3 = high_resolution_clock::now();
     long double result3 = 0.0;
     for (int i = 0; i < 10000; i++) {
-        result3 = calculoFOmat2(NUM_HUBS, hubs, matrizDistancias);
+        result3 = calculoFOmat(NUM_HUBS, hubs, matrizDistancias);
     }
     auto end3 = high_resolution_clock::now();
     auto duration3 = duration_cast<microseconds>(end3 - start3);
