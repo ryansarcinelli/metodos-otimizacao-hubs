@@ -55,19 +55,19 @@ void lerArquivoEntrada(const string& nomeArquivo, Node nos[MAX_NOS]) {
 }
 
 
-void criarArquivoDeSaida(Node nos[MAX_NOS], int NUM_NOS) {
-    ofstream arquivo("saida.txt");
-    if (!arquivo.is_open()) exit(1);
+// void criarArquivoDeSaida(Node nos[MAX_NOS], int NUM_NOS) {
+//     ofstream arquivo("saida.txt");
+//     if (!arquivo.is_open()) exit(1);
 
-    arquivo << NUM_NOS << endl;
+//     arquivo << NUM_NOS << endl;
 
     arquivo << std::fixed << std::setprecision(6);
     for (int i = 0; i <= NUM_NOS; ++i) {
         arquivo << nos[i].x << " " << nos[i].y << endl;
     }
 
-    arquivo.close();
-}
+//     arquivo.close();
+// }
 
 void heuristicaConstrutiva(int hubs[], int NUM_HUBS, int numeroDeHubs) {
     memset(hubs, -1, sizeof(int) * numeroDeHubs);
@@ -151,7 +151,7 @@ int main() {
     int hubs[NUM_HUBS] = {3,5,13,16};
 
     lerArquivoEntrada(nomeArquivo, nos);
-    criarArquivoDeSaida(nos, MAX_NOS);
+    //criarArquivoDeSaida(nos, MAX_NOS);
     //heuristicaConstrutiva(hubs, NUM_HUBS, numeroDeHubs);
     //printHubs(hubs, NUM_HUBS);
     calcularMatrizDeDistancias(matrizDistancias, nos, MAX_NOS);
@@ -164,7 +164,7 @@ int main() {
     }
     auto end3 = high_resolution_clock::now();
     auto duration3 = duration_cast<microseconds>(end3 - start3);
-    cout << "-------------\n";
+    cout << "-------------------\n";
     cout << "Maior custo - Matriz NOVA: " << fixed << setprecision(2) << result3 << endl;
     cout << "Tempo - Matriz NOVA: " << duration3.count() << " microssegundos" << endl;
 
@@ -180,12 +180,11 @@ int main() {
 
     return 0;
 }
-/*
-void resultadoUMApHCP(){
+
+void resultadoUMApHCP(double FO){
     printf("n: %i   ", MAX_NOS);
     printf("p: %i", NUM_HUBS);
-    printf("FO: %f  ", );
+    printf("FO: %f  ", FO);
     printf("\n\n");
     printf("");
 }
-*/
