@@ -28,14 +28,12 @@ Solucao clonarSolucao(const Solucao& solucaoOriginal) {
 }
 
 void lerArquivoEntrada(const string& nomeArquivo) {
+
     ifstream arquivo(nomeArquivo);
     if (!arquivo.is_open()) exit(1);
 
     int NUM_NOS;
     arquivo >> NUM_NOS;
-
-    //arquivo >> std::fixed >> std::setprecision(6);
-
     for (int i = 0; i < NUM_NOS; ++i) {
         arquivo >> nos[i].x >> nos[i].y;
     }
@@ -51,15 +49,16 @@ void criarArquivoDeSaida() {
     ofstream arquivo("saida.txt");
     if (!arquivo.is_open()) exit(1);
 
-    arquivo << NUM_NOS << endl;
+//     arquivo << NUM_NOS << endl;
 
-    arquivo << std::fixed << std::setprecision(6);
-    for (int i = 0; i <= NUM_NOS; ++i) {
-        arquivo << nos[i].x << " " << nos[i].y << endl;
-    }
+    // arquivo << std::fixed << std::setprecision(6);
+    // for (int i = 0; i <= NUM_NOS; ++i) {
+    //     arquivo << nos[i].x << " " << nos[i].y << endl;
+    // }
 
-    arquivo.close();
-}
+//     arquivo.close();
+// }
+
 
 Node calcularCentro() {
     double somaX = 0.0, somaY = 0.0;
@@ -208,8 +207,12 @@ long double calculoFOmatParalelo() {
     for (int i = 0; i < NUM_NOS; ++i) {
         for (int j = i + 1; j < NUM_NOS; ++j) {
             long double minCost = std::numeric_limits<long double>::max();
+
             for (int k = 0; k < NUM_HUBS; ++k) {
+                double dist_ik = matrizDistancias[i][hubs[k]];
+                
                 for (int l = 0; l < NUM_HUBS; ++l) {
+
                     long double cost = matrizDistancias[i][hubs[k]] + 
                                        alpha * matrizDistancias[hubs[k]][hubs[l]] + 
                                        matrizDistancias[hubs[l]][j];
@@ -245,6 +248,7 @@ void heuristicaConstrutiva() {
     }
     double raioMenor = raioMaior / 2.0; // Define o raio menor como metade do maior
 
+
     // Divisão dos nós em setores e círculos concêntricos
     vector<int> setores[4][2]; // Matriz de vetores: [setor][círculo] -> 0: menor, 1: maior
     for (int i = 0; i < NUM_HUBS; i++) {
@@ -278,7 +282,9 @@ void heuristicaConstrutiva() {
         }
         maiorPrimeiro = !maiorPrimeiro; // Inverte a ordem de prioridade
     }
+
 }
+
 
 int main() {
     string nomeArquivo = "inst200.txt";
@@ -305,8 +311,12 @@ int main() {
     for (int i = 0; i < 1; i++) {
         result3 = calculoFOmat();
     }
+
+    //resultadoUMApHCP(result3);
+
     auto end3 = high_resolution_clock::now();
     auto duration3 = duration_cast<microseconds>(end3 - start3);
+
     cout << "Maior custo - Matriz : " << fixed << setprecision(2) << result3 << endl;
     cout << "Tempo - Matriz : " << duration3.count() << " microssegundos" << endl;
     
@@ -323,4 +333,3 @@ int main() {
     //escreverSolucao("solucao.txt", result3, hubs, atribuicoes, numAtribuicoes);
     return 0;
 }
-

@@ -1,10 +1,12 @@
 {
     "files.associations": {
+        "*.embeddedhtml": "html",
         "iomanip": "cpp",
         "chrono": "cpp",
         "ostream": "cpp",
         "iostream": "cpp",
         "limits": "cpp",
+
         "iosfwd": "cpp",
         "array": "cpp",
         "atomic": "cpp",
@@ -13,6 +15,7 @@
         "clocale": "cpp",
         "cmath": "cpp",
         "cstdarg": "cpp",
+
         "cstddef": "cpp",
         "cstdint": "cpp",
         "cstdio": "cpp",
@@ -20,6 +23,7 @@
         "cstring": "cpp",
         "ctime": "cpp",
         "cwchar": "cpp",
+
         "cwctype": "cpp",
         "deque": "cpp",
         "unordered_map": "cpp",
@@ -50,5 +54,6 @@
         "condition_variable": "cpp",
         "mutex": "cpp",
         "thread": "cpp"
+
     }
 }
