@@ -226,7 +226,7 @@ void salvaCaminhos() {
 }
 
 int main() {
-    string nomeArquivo = "inst20.txt";
+    string nomeArquivo = "inst200.txt";
     int numsol=0;
     lerArquivoEntrada(nomeArquivo);
     criarArquivoDeSaida();
