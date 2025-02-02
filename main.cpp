@@ -49,15 +49,14 @@ void criarArquivoDeSaida() {
     ofstream arquivo("saida.txt");
     if (!arquivo.is_open()) exit(1);
 
-//     arquivo << NUM_NOS << endl;
+     arquivo << NUM_NOS << endl;
 
-    // arquivo << std::fixed << std::setprecision(6);
-    // for (int i = 0; i <= NUM_NOS; ++i) {
-    //     arquivo << nos[i].x << " " << nos[i].y << endl;
-    // }
-
-//     arquivo.close();
-// }
+    arquivo << std::fixed << std::setprecision(6);
+     for (int i = 0; i <= NUM_NOS; ++i) {
+         arquivo << nos[i].x << " " << nos[i].y << endl;
+     }
+     arquivo.close();
+}
 
 
 Node calcularCentro() {
@@ -69,61 +68,6 @@ Node calcularCentro() {
     }
     
     return {somaX / NUM_NOS, somaY / NUM_NOS};
-}
-
-void heuristicaConstrutiva() {
-    // Determinar o ponto central do conjunto de nós
-    double centroX = 0.0, centroY = 0.0;
-    for (int i = 0; i < NUM_HUBS; i++) {
-        centroX += nos[i].x; // Soma das coordenadas X
-        centroY += nos[i].y; // Soma das coordenadas Y
-    }
-    centroX /= NUM_HUBS; // Média das coordenadas X
-    centroY /= NUM_HUBS; // Média das coordenadas Y
-
-    // Determinar o ponto mais distante para definir o raio maior
-    double raioMaior = 0.0;
-    for (int i = 0; i < NUM_HUBS; i++) {
-        double distancia = sqrt(pow(nos[i].x - centroX, 2) + pow(nos[i].y - centroY, 2)); // Distância euclidiana
-        if (distancia > raioMaior) {
-            raioMaior = distancia; // Atualiza o maior raio encontrado
-        }
-    }
-    double raioMenor = raioMaior / 2.0; // Define o raio menor como metade do maior
-
-    // Divisão dos nós em setores e círculos concêntricos
-    vector<int> setores[4][2]; // Matriz de vetores: [setor][círculo] -> 0: menor, 1: maior
-    for (int i = 0; i < NUM_HUBS; i++) {
-        double dx = nos[i].x - centroX;
-        double dy = nos[i].y - centroY;
-        double distancia = sqrt(dx * dx + dy * dy); // Distância do nó ao centro
-        int setor = (dx >= 0 && dy >= 0) ? 0 : (dx < 0 && dy >= 0) ? 1 : (dx < 0 && dy < 0) ? 2 : 3; // Determina o setor
-        int circulo = (distancia <= raioMenor) ? 0 : 1; // Determina se está no círculo menor ou maior
-        setores[setor][circulo].push_back(i); // Armazena o índice do nó
-    }
-
-    // Selecionar hubs alternando entre círculos e setores
-    int count = 0;
-    bool maiorPrimeiro = true; // Alterna entre priorizar o círculo maior ou menor
-    while (count < NUM_HUBS) {
-        // Primeira iteração pelos setores
-        for (int s = 0; s < 4 && count < NUM_HUBS; s++) {
-            int circuloIdx = maiorPrimeiro ? 1 : 0; // Define se busca no maior ou menor primeiro
-            if (!setores[s][circuloIdx].empty()) {
-                hubs[count++] = setores[s][circuloIdx].back(); // Seleciona um nó como hub
-                setores[s][circuloIdx].pop_back(); // Remove o nó selecionado
-            }
-        }
-        // Segunda iteração pelos setores
-        for (int s = 0; s < 4 && count < NUM_HUBS; s++) {
-            int circuloIdx = maiorPrimeiro ? 0 : 1; // Alterna a busca entre maior e menor
-            if (!setores[s][circuloIdx].empty()) {
-                hubs[count++] = setores[s][circuloIdx].back(); // Seleciona outro nó
-                setores[s][circuloIdx].pop_back(); // Remove o nó selecionado
-            }
-        }
-        maiorPrimeiro = !maiorPrimeiro; // Inverte a ordem de prioridade
-    }
 }
 
 void selecionarHubs() {
@@ -228,63 +172,55 @@ long double calculoFOmatParalelo() {
     return maxCost;
 }
 
-void heuristicaConstrutiva() {
-    // Determinar o ponto central do conjunto de nós
-    double centroX = 0.0, centroY = 0.0;
-    for (int i = 0; i < NUM_HUBS; i++) {
-        centroX += nos[i].x; // Soma das coordenadas X
-        centroY += nos[i].y; // Soma das coordenadas Y
-    }
-    centroX /= NUM_HUBS; // Média das coordenadas X
-    centroY /= NUM_HUBS; // Média das coordenadas Y
+void salvaCaminhos() {
+    const double alpha = 0.75;
+    long double maxCost = 0.0;
+    int optimalOR = -1, optimalH1 = -1, optimalH2 = -1, optimalDS = -1;  // Para armazenar a solução ótima
+    long double optimalCost = 0.0; // Para armazenar o custo ótimo
 
-    // Determinar o ponto mais distante para definir o raio maior
-    double raioMaior = 0.0;
-    for (int i = 0; i < NUM_HUBS; i++) {
-        double distancia = sqrt(pow(nos[i].x - centroX, 2) + pow(nos[i].y - centroY, 2)); // Distância euclidiana
-        if (distancia > raioMaior) {
-            raioMaior = distancia; // Atualiza o maior raio encontrado
-        }
-    }
-    double raioMenor = raioMaior / 2.0; // Define o raio menor como metade do maior
+    // Abrindo o arquivo para escrita (modo "w" para escrita, sobrescreve o arquivo se já existir)
+    FILE *outFile = fopen("resultados.txt", "w");  // Alterado de "" para "w"
 
-
-    // Divisão dos nós em setores e círculos concêntricos
-    vector<int> setores[4][2]; // Matriz de vetores: [setor][círculo] -> 0: menor, 1: maior
-    for (int i = 0; i < NUM_HUBS; i++) {
-        double dx = nos[i].x - centroX;
-        double dy = nos[i].y - centroY;
-        double distancia = sqrt(dx * dx + dy * dy); // Distância do nó ao centro
-        int setor = (dx >= 0 && dy >= 0) ? 0 : (dx < 0 && dy >= 0) ? 1 : (dx < 0 && dy < 0) ? 2 : 3; // Determina o setor
-        int circulo = (distancia <= raioMenor) ? 0 : 1; // Determina se está no círculo menor ou maior
-        setores[setor][circulo].push_back(i); // Armazena o índice do nó
+    if (outFile == nullptr) {  // Verifica se o arquivo foi aberto corretamente
+        std::cerr << "Erro ao abrir o arquivo para escrita!" << std::endl;
+        return;  // Se não conseguir abrir o arquivo, retorna
     }
 
-    // Selecionar hubs alternando entre círculos e setores
-    int count = 0;
-    bool maiorPrimeiro = true; // Alterna entre priorizar o círculo maior ou menor
-    while (count < NUM_HUBS) {
-        // Primeira iteração pelos setores
-        for (int s = 0; s < 4 && count < NUM_HUBS; s++) {
-            int circuloIdx = maiorPrimeiro ? 1 : 0; // Define se busca no maior ou menor primeiro
-            if (!setores[s][circuloIdx].empty()) {
-                hubs[count++] = setores[s][circuloIdx].back(); // Seleciona um nó como hub
-                setores[s][circuloIdx].pop_back(); // Remove o nó selecionado
+    for (int i = 0; i < NUM_NOS; ++i) {
+        for (int j = i + 1; j < NUM_NOS; ++j) {
+            double minCost = std::numeric_limits<double>::max();
+            for (int k = 0; k < NUM_HUBS; ++k) {
+                for (int l = 0; l < NUM_HUBS; ++l) {
+                    double cost = matrizDistancias[i][hubs[k]] + 
+                                       alpha * matrizDistancias[hubs[k]][hubs[l]] + 
+                                       matrizDistancias[hubs[l]][j];
+                    
+                    // Salvando os resultados no arquivo
+                    fprintf(outFile, "OR: %d H1: %d H2: %d DS: %d: %.2Lf\n", i, hubs[k], hubs[l], j, cost);
+
+                    // Verifica se é a solução com maior custo até agora
+                    if (cost > optimalCost) {
+                        optimalCost = cost;
+                        optimalOR = i;
+                        optimalH1 = k;
+                        optimalH2 = l;
+                        optimalDS = j;
+                    }
+
+                    minCost = MIN(minCost, cost);
+                }
             }
+            maxCost = MAX(maxCost, minCost);
         }
-        // Segunda iteração pelos setores
-        for (int s = 0; s < 4 && count < NUM_HUBS; s++) {
-            int circuloIdx = maiorPrimeiro ? 0 : 1; // Alterna a busca entre maior e menor
-            if (!setores[s][circuloIdx].empty()) {
-                hubs[count++] = setores[s][circuloIdx].back(); // Seleciona outro nó
-                setores[s][circuloIdx].pop_back(); // Remove o nó selecionado
-            }
-        }
-        maiorPrimeiro = !maiorPrimeiro; // Inverte a ordem de prioridade
     }
 
+    // Escrevendo a solução ótima no final do arquivo
+    fprintf(outFile, "\nSolução Ótima:\n");
+    fprintf(outFile, "OR: %d H1: %d H2: %d DS: %d FO: %.2Lf\n", optimalOR, optimalH1, optimalH2, optimalDS, optimalCost);
+
+    // Fechando o arquivo após escrever os dados
+    fclose(outFile);
 }
-
 
 int main() {
     string nomeArquivo = "inst200.txt";
