@@ -132,7 +132,7 @@ long double calculoFOmat() {
                                        alpha * matrizDistancias[hubs[k]][hubs[l]] + 
                                        matrizDistancias[hubs[l]][j];
 
-                    printf("calculo de fo: %f\n", cost);
+                    
                     minCost = MIN(minCost, cost);  
                 }
             }
@@ -157,10 +157,10 @@ long double calculoFOmatParalelo() {
                 
                 for (int l = 0; l < NUM_HUBS; ++l) {
 
-                    long double cost = matrizDistancias[i][hubs[k]] + 
+                    double cost = matrizDistancias[i][hubs[k]] + 
                                        alpha * matrizDistancias[hubs[k]][hubs[l]] + 
                                        matrizDistancias[hubs[l]][j];
-
+                    printf( "OR: %d H1: %d H2: %d DS: %d: %.2lf\n", i, hubs[k], hubs[l], j, cost);
                     minCost = MIN(minCost, cost);  // Usando o macro MIN
                 }
             }
@@ -174,16 +174,16 @@ long double calculoFOmatParalelo() {
 
 void salvaCaminhos() {
     const double alpha = 0.75;
-    long double maxCost = 0.0;
-    int optimalOR = -1, optimalH1 = -1, optimalH2 = -1, optimalDS = -1;  // Para armazenar a solução ótima
-    long double optimalCost = 0.0; // Para armazenar o custo ótimo
+    double maxCost = 0.0;
+    int optimalOR = -1, optimalH1 = -1, optimalH2 = -1, optimalDS = -1;
+    double optimalCost = -1.0; // Inicializado com um valor baixo
 
-    // Abrindo o arquivo para escrita (modo "w" para escrita, sobrescreve o arquivo se já existir)
-    FILE *outFile = fopen("resultados.txt", "w");  // Alterado de "" para "w"
+    // Abrindo o arquivo para escrita
+    FILE *outFile = fopen("resultados.txt", "w");
 
-    if (outFile == nullptr) {  // Verifica se o arquivo foi aberto corretamente
+    if (outFile == nullptr) {
         std::cerr << "Erro ao abrir o arquivo para escrita!" << std::endl;
-        return;  // Se não conseguir abrir o arquivo, retorna
+        return;
     }
 
     for (int i = 0; i < NUM_NOS; ++i) {
@@ -192,18 +192,20 @@ void salvaCaminhos() {
             for (int k = 0; k < NUM_HUBS; ++k) {
                 for (int l = 0; l < NUM_HUBS; ++l) {
                     double cost = matrizDistancias[i][hubs[k]] + 
-                                       alpha * matrizDistancias[hubs[k]][hubs[l]] + 
-                                       matrizDistancias[hubs[l]][j];
-                    
-                    // Salvando os resultados no arquivo
-                    fprintf(outFile, "OR: %d H1: %d H2: %d DS: %d: %.2Lf\n", i, hubs[k], hubs[l], j, cost);
+                                  alpha * matrizDistancias[hubs[k]][hubs[l]] + 
+                                  matrizDistancias[hubs[l]][j];
 
+                    // Salvando os resultados no arquivo
+                    if(k%16==0){
+                        fprintf(outFile, "OR: %d H1: %d H2: %d DS: %d: %.2lf\n", i, hubs[k], hubs[l], j, cost);
+                    }
+                    
                     // Verifica se é a solução com maior custo até agora
-                    if (cost > optimalCost) {
+                    if (cost > optimalCost) {  
                         optimalCost = cost;
                         optimalOR = i;
-                        optimalH1 = k;
-                        optimalH2 = l;
+                        optimalH1 = hubs[k];  // Pegando os valores reais dos hubs
+                        optimalH2 = hubs[l];
                         optimalDS = j;
                     }
 
@@ -216,14 +218,15 @@ void salvaCaminhos() {
 
     // Escrevendo a solução ótima no final do arquivo
     fprintf(outFile, "\nSolução Ótima:\n");
-    fprintf(outFile, "OR: %d H1: %d H2: %d DS: %d FO: %.2Lf\n", optimalOR, optimalH1, optimalH2, optimalDS, optimalCost);
+    fprintf(outFile, "OR: %d H1: %d H2: %d DS: %d FO: %.2lf\n", 
+            optimalOR, optimalH1, optimalH2, optimalDS, optimalCost);
 
     // Fechando o arquivo após escrever os dados
     fclose(outFile);
 }
 
 int main() {
-    string nomeArquivo = "inst200.txt";
+    string nomeArquivo = "inst20.txt";
     int numsol=0;
     lerArquivoEntrada(nomeArquivo);
     criarArquivoDeSaida();
@@ -231,7 +234,7 @@ int main() {
     //printHubs(hubs, NUM_HUBS);
     calcularMatrizDeDistancias();
     //imprimirMatriz();
-
+    salvaCaminhos();
     selecionarHubs();
 
     std::cout << "Hubs selecionados: ";
