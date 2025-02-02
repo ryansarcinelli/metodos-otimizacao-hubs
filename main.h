@@ -17,8 +17,10 @@
 using namespace std;
 using namespace chrono;
 
-const int MAX_NOS = 20;
-const int NUM_HUBS = 4;
+const int NUM_NOS = 200;
+const int NUM_HUBS = 50;
+int MAX_SOLUCOES = 1000;
+int hubs[NUM_HUBS];
 
 struct Node {
     double x, y;
@@ -30,23 +32,24 @@ struct Solucao {
     int hubs[NUM_HUBS];
 };
 
-double matrizDistancias[MAX_NOS][MAX_NOS];
-Node nos[MAX_NOS];
+double matrizDistancias[NUM_NOS][NUM_NOS];
+Node nos[NUM_NOS];
 
-extern Solucao melhorSolucao;
-extern double matrizDistancias[MAX_NOS][MAX_NOS];
-extern Node nos[MAX_NOS];
+
+Solucao sol;
+extern double matrizDistancias[NUM_NOS][NUM_NOS];
+extern Node nos[NUM_NOS];
 
 Solucao clonarSolucao(const Solucao& solucaoOriginal);
-void lerArquivoEntrada(const string& nomeArquivo, Node nos[MAX_NOS]);
+void lerArquivoEntrada(const string& nomeArquivo);
 long double calcularDistancia(const Node& a, const Node& b);
-void criarArquivoDeSaida(Node nos[MAX_NOS], int NUM_NOS);
-Node calcularCentro(Node nos[MAX_NOS]);
-void selecionarHubs(Node nos[MAX_NOS], int hubs[], int NUM_HUBS);
-void heuristicaConstrutiva(int hubs[], int NUM_HUBS, int numeroDeHubs);
-void calcularMatrizDeDistancias(double matrizDistancias[MAX_NOS][MAX_NOS], Node nos[MAX_NOS], int MAX_NOS);
-void imprimirMatriz(double matrizDistancias[MAX_NOS][MAX_NOS], int MAX_NOS);
+void criarArquivoDeSaida();
+Node calcularCentro();
+void selecionarHubs();
+void heuristicaConstrutiva();
+void calcularMatrizDeDistancias();
+void imprimirMatriz();
 void printHubs(int* hubs, int NUM_HUBS);
-long double calculoFOmat(int hubs[]);
+long double calculoFOmat();
 
 #endif // MAIN_H
