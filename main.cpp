@@ -10,22 +10,11 @@
 #include <chrono>
 #include <algorithm>
 #include <cstring>
+#include "main.h"
 
 using namespace std;
 using namespace chrono;
 
-const int MAX_NOS = 20;
-const int NUM_HUBS = 4;
-
-struct Node {
-    double x, y;
-    long double dist;
-};
-
-struct Solucao {
-    double FO;
-    int hubs[NUM_HUBS];
-};
 
 Solucao clonarSolucao(const Solucao& solucaoOriginal) {
     Solucao novaSolucao;
@@ -33,10 +22,6 @@ Solucao clonarSolucao(const Solucao& solucaoOriginal) {
     memcpy(novaSolucao.hubs, solucaoOriginal.hubs, sizeof(solucaoOriginal.hubs));
     return novaSolucao;
 }
-
-
-double matrizDistancias[MAX_NOS][MAX_NOS];
-Node nos[MAX_NOS];
 
 void lerArquivoEntrada(const string& nomeArquivo, Node nos[MAX_NOS]) {
     ifstream arquivo(nomeArquivo);
@@ -53,7 +38,6 @@ void lerArquivoEntrada(const string& nomeArquivo, Node nos[MAX_NOS]) {
 
     arquivo.close();
 }
-
 
 long double calcularDistancia(const Node& a, const Node& b) {
     return sqrt(pow(a.x - b.x, 2) + pow(a.y - b.y, 2));
@@ -105,13 +89,10 @@ void selecionarHubs(Node nos[MAX_NOS], int hubs[], int NUM_HUBS) {
     }
 }
 
-
-
 void heuristicaConstrutiva(int hubs[], int NUM_HUBS, int numeroDeHubs) {
     memset(hubs, -1, sizeof(int) * numeroDeHubs);
     for (int i = 0; i < numeroDeHubs; i++) hubs[i] = i;
 }
-
 
 void calcularMatrizDeDistancias(double matrizDistancias[MAX_NOS][MAX_NOS], Node nos[MAX_NOS], int MAX_NOS) {
     for (int i = 0; i <= MAX_NOS; ++i) {
@@ -141,7 +122,7 @@ void printHubs(int* hubs, int NUM_HUBS) {
     std::cout << std::endl;
 }
 
-long double calculoFOmat(int NUM_HUBS, int hubs[], double matrizDistancias[MAX_NOS][MAX_NOS]) {
+long double calculoFOmat(int hubs[]) {
     const double alpha = 0.75;
     long double maxCost = 0.0;
 
@@ -153,7 +134,7 @@ long double calculoFOmat(int NUM_HUBS, int hubs[], double matrizDistancias[MAX_N
                     long double cost = matrizDistancias[i][hubs[k]] + 
                                        alpha * matrizDistancias[hubs[k]][hubs[l]] + 
                                        matrizDistancias[hubs[l]][j];
-                     //std::cout << "Custo entre " << i << " e " << j << " com k=" << k << " e l=" << l << ": " << cost << std::endl;
+                        //std::cout << "OR: " << i << " H1: " << k << " H2: " << l << "DS: " << j << ": " << cost << std::endl;
 
                     minCost = std::min(minCost, cost);
                 }
@@ -165,9 +146,82 @@ long double calculoFOmat(int NUM_HUBS, int hubs[], double matrizDistancias[MAX_N
 //    std::cout << "Maior custo calculado: " << maxCost << std::endl;
     return maxCost;
 }
+/*
+void registrarAtribuicoes(int hubs[], int numHubs, double matrizDistancias[MAX_NOS][MAX_NOS], double atribuicoes[MAX_NOS][5]) {
+    const double alpha = 0.75;
 
+    for (int i = 0; i < MAX_NOS; ++i) {  
+        long double menorCusto = std::numeric_limits<long double>::max();
+        int melhorH1 = -1, melhorH2 = -1, melhorDestino = -1;
 
+        for (int k = 0; k < numHubs; ++k) {
+            for (int l = 0; l < numHubs; ++l) {
+                for (int j = 0; j < MAX_NOS; ++j) {  // Destino possível
+                    long double custo = matrizDistancias[i][hubs[k]] +
+                                        alpha * matrizDistancias[hubs[k]][hubs[l]] +
+                                        matrizDistancias[hubs[l]][j];
 
+                    if (custo < menorCusto) {
+                        menorCusto = custo;
+                        melhorH1 = hubs[k];
+                        melhorH2 = hubs[l];
+                        melhorDestino = j;
+                    }
+                }
+            }
+        }
+
+        // Salva a melhor atribuição encontrada para esse nó
+        atribuicoes[i][0] = i;               // OR
+        atribuicoes[i][1] = melhorH1;        // H1
+        atribuicoes[i][2] = melhorH2;        // H2
+        atribuicoes[i][3] = melhorDestino;   // DS
+        atribuicoes[i][4] = menorCusto;      // CUSTO
+    }
+}
+
+void escreverSolucao(const char* nomeArquivo, double valorFO, 
+                     int hubs[], int atribuicoes[][5], int numAtribuicoes) {
+    std::ofstream arquivo(nomeArquivo);
+
+    // Cabeçalho
+    std::cout << "n: " << MAX_NOS << "   p: " << NUM_HUBS << std::endl;
+    arquivo << "n: " << MAX_NOS << "   p: " << NUM_HUBS << std::endl;
+
+    std::cout << "FO: " << std::fixed << std::setprecision(2) << valorFO << std::endl;
+    arquivo << "FO: " << std::fixed << std::setprecision(2) << valorFO << std::endl;
+
+    std::cout << "HUBS: [";
+    arquivo << "HUBS: [";
+    for (int i = 0; i < NUM_HUBS; ++i) {
+        std::cout << hubs[i] << (i < NUM_HUBS - 1 ? ", " : "");
+        arquivo << hubs[i] << (i < NUM_HUBS - 1 ? ", " : "");
+    }
+    std::cout << "]" << std::endl;
+    arquivo << "]" << std::endl;
+
+    // Cabeçalho da tabela
+    std::cout << std::endl << "OR   H1   H2   DS   CUSTO" << std::endl;
+    arquivo << std::endl << "OR   H1   H2   DS   CUSTO" << std::endl;
+
+    // Imprimir as linhas da tabela
+    for (int i = 0; i < numAtribuicoes; ++i) {
+        std::cout << std::setw(2) << atribuicoes[i][0] << "   "
+                  << std::setw(2) << atribuicoes[i][1] << "   "
+                  << std::setw(2) << atribuicoes[i][2] << "   "
+                  << std::setw(2) << atribuicoes[i][3] << "   "
+                  << std::fixed << std::setprecision(2) << atribuicoes[i][4] << std::endl;
+
+        arquivo << std::setw(2) << atribuicoes[i][0] << "   "
+                << std::setw(2) << atribuicoes[i][1] << "   "
+                << std::setw(2) << atribuicoes[i][2] << "   "
+                << std::setw(2) << atribuicoes[i][3] << "   "
+                << std::fixed << std::setprecision(2) << atribuicoes[i][4] << std::endl;
+    }
+
+    arquivo.close();
+}
+*/
 int main() {
     string nomeArquivo = "inst20.txt";
     int hubs[NUM_HUBS];
@@ -191,12 +245,13 @@ int main() {
     auto start3 = high_resolution_clock::now();
     long double result3 = 0.0;
     for (int i = 0; i < 10000; i++) {
-        result3 = calculoFOmat(NUM_HUBS, hubs, matrizDistancias);
+        result3 = calculoFOmat(hubs);
     }
     auto end3 = high_resolution_clock::now();
     auto duration3 = duration_cast<microseconds>(end3 - start3);
     cout << "Maior custo - Matriz NOVA: " << fixed << setprecision(2) << result3 << endl;
     cout << "Tempo - Matriz NOVA: " << duration3.count() << " microssegundos" << endl;
 
+    escreverSolucao("solucao.txt", result3, hubs, atribuicoes, numAtribuicoes);
     return 0;
 }
