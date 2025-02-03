@@ -17,9 +17,9 @@
 using namespace std;
 using namespace chrono;
 
-
-const int NUM_NOS = 200;
-const int NUM_HUBS = 50;
+extern const int MAX_HUBS;
+extern const int NUM_NOS = 20;
+extern const int NUM_HUBS = 4;
 int MAX_SOLUCOES = 1000;
 int hubs[NUM_HUBS];
 

@@ -11,6 +11,8 @@
 #include <algorithm>
 #include <cstring>
 #include <vector>
+#include <sstream>
+
 #include "main.h"
 
 #define MAX(X,Y) ((X > Y) ? X : Y)
@@ -143,132 +145,166 @@ long double calculoFOmat() {
     return maxCost;
 }
 
-long double calculoFOmatParalelo() {
+
+void salvarResultados(const std::string &nomeArquivo, int n, int p, double FO, const int hubsSelecionados[]) {
+    std::ofstream arquivo(nomeArquivo);
+    if (!arquivo.is_open()) {
+        std::cerr << "Erro ao abrir o arquivo para escrita: " << nomeArquivo << std::endl;
+        exit(1);
+    }
+    
+    arquivo << "n: " << n << " p: " << p << "\n";
+    
+    std::stringstream ss;
+    ss << std::fixed << std::setprecision(2) << FO;
+    std::string foStr = ss.str();
+    for (char &c : foStr) if (c == '.') c = ',';
+    arquivo << "FO: " << foStr << "\n";
+    
+    arquivo << "HUBS: [";
+    for (int i = 0; i < p; i++) {
+        arquivo << hubsSelecionados[i] << (i < p - 1 ? ", " : "");
+    }
+    arquivo << "]\n\n";
+    
+    arquivo << "OR\tH1\tH2\tDS\tCUSTO\n";
     const double alpha = 0.75;
-    long double maxCost = 0.0;
-
-    #pragma omp parallel for reduction(max:maxCost)  // Paraleliza o loop e usa redução para maxCost
-    for (int i = 0; i < NUM_NOS; ++i) {
-        for (int j = i + 1; j < NUM_NOS; ++j) {
-            long double minCost = std::numeric_limits<long double>::max();
-
-            for (int k = 0; k < NUM_HUBS; ++k) {
-                double dist_ik = matrizDistancias[i][hubs[k]];
-                
-                for (int l = 0; l < NUM_HUBS; ++l) {
-
-                    double cost = matrizDistancias[i][hubs[k]] + 
-                                       alpha * matrizDistancias[hubs[k]][hubs[l]] + 
-                                       matrizDistancias[hubs[l]][j];
-                    printf( "OR: %d H1: %d H2: %d DS: %d: %.2lf\n", i, hubs[k], hubs[l], j, cost);
-                    minCost = MIN(minCost, cost);  // Usando o macro MIN
+    
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            if (i == j) continue; // Remove redundância quando origem e destino são iguais
+            
+            double minCost = std::numeric_limits<double>::max();
+            int bestHub1 = -1, bestHub2 = -1;
+            
+            for (int k = 0; k < p; k++) {
+                for (int l = 0; l < p; l++) {
+                    double custo = calcularDistancia(nos[i], nos[hubsSelecionados[k]]) +
+                                   alpha * calcularDistancia(nos[hubsSelecionados[k]], nos[hubsSelecionados[l]]) +
+                                   calcularDistancia(nos[hubsSelecionados[l]], nos[j]);
+                    
+                    if (custo < minCost) {
+                        minCost = custo;
+                        bestHub1 = hubsSelecionados[k];
+                        bestHub2 = hubsSelecionados[l];
+                    }
                 }
             }
-            #pragma omp critical
-            maxCost = MAX(maxCost, minCost);  // Usando o macro MAX
+            
+            std::stringstream ssCusto;
+            ssCusto << std::fixed << std::setprecision(2) << minCost;
+            std::string custoStr = ssCusto.str();
+            
+            arquivo << i << "\t" << bestHub1 << "\t" << bestHub2 << "\t" << j << "\t" << custoStr << "\n";
         }
     }
     
-    return maxCost;
+    arquivo.close();
 }
 
-void salvaCaminhos() {
-    const double alpha = 0.75;
-    double maxCost = 0.0;
-    int optimalOR = -1, optimalH1 = -1, optimalH2 = -1, optimalDS = -1;
-    double optimalCost = -1.0; // Inicializado com um valor baixo
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <vector>
+#include <string>
+#include <iomanip>
 
-    // Abrindo o arquivo para escrita
-    FILE *outFile = fopen("resultados.txt", "w");
+struct Entrada {
+    int OR;
+    int H1;
+    int H2;
+    int DS;
+    double CUSTO;  // CUSTO como double para valores decimais
+};
 
-    if (outFile == nullptr) {
-        std::cerr << "Erro ao abrir o arquivo para escrita!" << std::endl;
-        return;
+struct Dados {
+    int n;
+    int p;
+    double FO;
+    std::vector<int> HUBS;
+    std::vector<Entrada> entradas;
+};
+
+Dados lerResultados(const std::string& nomeArquivo) {
+    Dados dados;
+    std::ifstream arquivo(nomeArquivo);
+    std::string linha;
+
+    if (!arquivo) {
+        std::cerr << "Erro ao abrir o arquivo!" << std::endl;
+        return dados;
     }
 
-    for (int i = 0; i < NUM_NOS; ++i) {
-        for (int j = i + 1; j < NUM_NOS; ++j) {
-            double minCost = std::numeric_limits<double>::max();
-            for (int k = 0; k < NUM_HUBS; ++k) {
-                for (int l = 0; l < NUM_HUBS; ++l) {
-                    double cost = matrizDistancias[i][hubs[k]] + 
-                                  alpha * matrizDistancias[hubs[k]][hubs[l]] + 
-                                  matrizDistancias[hubs[l]][j];
+    // Lendo n e p
+    std::getline(arquivo, linha);
+    std::sscanf(linha.c_str(), "n: %d p: %d", &dados.n, &dados.p);
 
-                    // Salvando os resultados no arquivo
-                    if(k%16==0){
-                        fprintf(outFile, "OR: %d H1: %d H2: %d DS: %d: %.2lf\n", i, hubs[k], hubs[l], j, cost);
-                    }
-                    
-                    // Verifica se é a solução com maior custo até agora
-                    if (cost > optimalCost) {  
-                        optimalCost = cost;
-                        optimalOR = i;
-                        optimalH1 = hubs[k];  // Pegando os valores reais dos hubs
-                        optimalH2 = hubs[l];
-                        optimalDS = j;
-                    }
+    // Lendo FO
+    std::getline(arquivo, linha);
+    std::sscanf(linha.c_str(), "FO: %lf", &dados.FO);
 
-                    minCost = MIN(minCost, cost);
-                }
-            }
-            maxCost = MAX(maxCost, minCost);
-        }
+    // Lendo HUBS
+    std::getline(arquivo, linha);
+    linha = linha.substr(linha.find("[") + 1, linha.find("]") - linha.find("[") - 1);
+    std::istringstream fluxoHubs(linha);
+    int hub;
+    while (fluxoHubs >> hub) {
+        dados.HUBS.push_back(hub);
+        if (fluxoHubs.peek() == ',') fluxoHubs.ignore();
     }
 
-    // Escrevendo a solução ótima no final do arquivo
-    fprintf(outFile, "\nSolução Ótima:\n");
-    fprintf(outFile, "OR: %d H1: %d H2: %d DS: %d FO: %.2lf\n", 
-            optimalOR, optimalH1, optimalH2, optimalDS, optimalCost);
+    // Ignorar cabeçalho da tabela
+    std::getline(arquivo, linha);
 
-    // Fechando o arquivo após escrever os dados
-    fclose(outFile);
+    // Lendo entradas da tabela
+    while (std::getline(arquivo, linha)) {
+        Entrada entrada;
+        std::istringstream iss(linha);
+        
+        // Lendo a linha da tabela
+        iss >> entrada.OR >> entrada.H1 >> entrada.H2 >> entrada.DS >> entrada.CUSTO;
+
+        // // Verificar se a leitura foi bem-sucedida
+        // if (iss.fail()) {
+        //     std::cerr << "Erro ao ler a linha: " << linha << std::endl;
+        //     continue;  // Ignora a linha com erro
+        // }
+
+        dados.entradas.push_back(entrada);
+    }
+
+    arquivo.close();
+    return dados;
 }
+
+
 
 int main() {
-    string nomeArquivo = "inst200.txt";
-    int numsol=0;
-    lerArquivoEntrada(nomeArquivo);
-    criarArquivoDeSaida();
-    //heuristicaConstrutiva();
-    //printHubs(hubs, NUM_HUBS);
-    calcularMatrizDeDistancias();
-    //imprimirMatriz();
-    salvaCaminhos();
-    selecionarHubs();
 
-    std::cout << "Hubs selecionados: ";
-    for (int i = 0; i < NUM_HUBS; ++i) {
-        std::cout << hubs[i] << " ";
-    }
-    std::cout << std::endl;
+    // string nomeArquivo = "inst20.txt";
+    // int numsol=0;
+    // lerArquivoEntrada(nomeArquivo);
+    // criarArquivoDeSaida();
+    // //heuristicaConstrutiva();
+    // //printHubs(hubs, NUM_HUBS);
+    // calcularMatrizDeDistancias();
+    // //imprimirMatriz();
+    // selecionarHubs();
+
+    // std::cout << "Hubs selecionados: ";
+    // for (int i = 0; i < NUM_HUBS; ++i) {
+    //     std::cout << hubs[i] << " ";
+    // }
+    // std::cout << std::endl;
 
     
 
-    auto start3 = high_resolution_clock::now();
-    long double result3 = 0.0;
-    for (int i = 0; i < 1; i++) {
-        result3 = calculoFOmat();
-    }
+    // auto start3 = high_resolution_clock::now();
+    // long double FO = 0.0;
+    // for (int i = 0; i < 1; i++) {
+    //     FO = calculoFOmat();
+    // }
 
-    //resultadoUMApHCP(result3);
-
-    auto end3 = high_resolution_clock::now();
-    auto duration3 = duration_cast<microseconds>(end3 - start3);
-
-    cout << "Maior custo - Matriz : " << fixed << setprecision(2) << result3 << endl;
-    cout << "Tempo - Matriz : " << duration3.count() << " microssegundos" << endl;
-    
-    auto start = high_resolution_clock::now();
-    long double result = 0.0;
-    for (int i = 0; i < 1; i++) {
-        result = calculoFOmatParalelo();
-    }
-    auto end = high_resolution_clock::now();
-    auto duration = duration_cast<microseconds>(end - start);
-    cout << "Maior custo - Matriz : " << fixed << setprecision(2) << result << endl;
-    cout << "Tempo - Matriz : " << duration.count() << " microssegundos" << endl;
-    
-    //escreverSolucao("solucao.txt", result3, hubs, atribuicoes, numAtribuicoes);
+    // salvarResultados("resultados.txt", NUM_NOS, NUM_HUBS, FO, hubs);
     return 0;
 }
