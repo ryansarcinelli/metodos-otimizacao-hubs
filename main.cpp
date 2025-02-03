@@ -18,7 +18,6 @@
 #define MAX(X,Y) ((X > Y) ? X : Y)
 #define MIN(X,Y) ((X < Y) ? X : Y)
 
-
 using namespace std;
 using namespace chrono;
 
@@ -60,7 +59,6 @@ void criarArquivoDeSaida() {
      arquivo.close();
 }
 
-
 Node calcularCentro() {
     double somaX = 0.0, somaY = 0.0;
     
@@ -94,6 +92,7 @@ void selecionarHubs() {
 }
 
 void calcularMatrizDeDistancias() {
+    memset(matrizDistancias, 0, sizeof(matrizDistancias));
     for (int i = 0; i <= NUM_NOS; ++i) {
         for (int j = i + 1; j < NUM_NOS; ++j) { 
             matrizDistancias[i][j] = calcularDistancia(nos[i], nos[j]);
@@ -144,7 +143,6 @@ long double calculoFOmat() {
     
     return maxCost;
 }
-
 
 void salvarResultados(const std::string &nomeArquivo, int n, int p, double FO, const int hubsSelecionados[]) {
     std::ofstream arquivo(nomeArquivo);
@@ -202,29 +200,6 @@ void salvarResultados(const std::string &nomeArquivo, int n, int p, double FO, c
     arquivo.close();
 }
 
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <vector>
-#include <string>
-#include <iomanip>
-
-struct Entrada {
-    int OR;
-    int H1;
-    int H2;
-    int DS;
-    double CUSTO;  // CUSTO como double para valores decimais
-};
-
-struct Dados {
-    int n;
-    int p;
-    double FO;
-    std::vector<int> HUBS;
-    std::vector<Entrada> entradas;
-};
-
 Dados lerResultados(const std::string& nomeArquivo) {
     Dados dados;
     std::ifstream arquivo(nomeArquivo);
@@ -280,31 +255,40 @@ Dados lerResultados(const std::string& nomeArquivo) {
 
 
 int main() {
+    std::vector<Solucao> solucoes;
+    string nomeArquivo = "inst200.txt";
+    int numsol=0;
+    lerArquivoEntrada(nomeArquivo);
+    //criarArquivoDeSaida();
+    //printHubs(hubs, NUM_HUBS);
+    //imprimirMatriz();
 
-    // string nomeArquivo = "inst20.txt";
-    // int numsol=0;
-    // lerArquivoEntrada(nomeArquivo);
-    // criarArquivoDeSaida();
-    // //heuristicaConstrutiva();
-    // //printHubs(hubs, NUM_HUBS);
-    // calcularMatrizDeDistancias();
-    // //imprimirMatriz();
-    // selecionarHubs();
+    auto start1 = high_resolution_clock::now();
+    selecionarHubs();
+    calcularMatrizDeDistancias();
+    calculoFOmat();
+    auto stop1 = high_resolution_clock::now();
+    auto duration1 = duration_cast<microseconds>(stop1 - start1);
+    std::cout << "Tempo de execução contrutiva e FO 1x: " << duration1.count() << " microsegundos" << std::endl;
+//------------------------------------------------------------
+    auto start2 = high_resolution_clock::now();
+    long double FO = 0.0;
+    for (int i = 0; i < 1000; i++) {
+        calcularMatrizDeDistancias();
+        FO = calculoFOmat();
+    }
+    auto stop2 = high_resolution_clock::now();
+    auto duration2 = duration_cast<microseconds>(stop2 - start2);
+    std::cout << "Tempo de execução FO 1000x: " << duration2.count() << "microsegundos" << std::endl;
+//-------------------------------------------------------------
+    auto start3 = high_resolution_clock::now();
+    for (int i = 0; i < 1000; i++) {
+        selecionarHubs();
+    }
+    auto stop3 = high_resolution_clock::now();
+    auto duration3 = duration_cast<microseconds>(stop3 - start3);
+    std::cout << "Tempo de execução construtiva 1000x: " << duration3.count() << "microsegundos" << std::endl;
 
-    // std::cout << "Hubs selecionados: ";
-    // for (int i = 0; i < NUM_HUBS; ++i) {
-    //     std::cout << hubs[i] << " ";
-    // }
-    // std::cout << std::endl;
-
-    
-
-    // auto start3 = high_resolution_clock::now();
-    // long double FO = 0.0;
-    // for (int i = 0; i < 1; i++) {
-    //     FO = calculoFOmat();
-    // }
-
-    // salvarResultados("resultados.txt", NUM_NOS, NUM_HUBS, FO, hubs);
+    salvarResultados("resultados.txt", NUM_NOS, NUM_HUBS, FO, hubs);
     return 0;
 }

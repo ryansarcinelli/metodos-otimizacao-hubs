@@ -18,8 +18,8 @@ using namespace std;
 using namespace chrono;
 
 extern const int MAX_HUBS;
-extern const int NUM_NOS = 20;
-extern const int NUM_HUBS = 4;
+extern const int NUM_NOS = 200;
+extern const int NUM_HUBS = 50;
 int MAX_SOLUCOES = 1000;
 int hubs[NUM_HUBS];
 
@@ -31,6 +31,22 @@ struct Node {
 struct Solucao {
     double FO;
     int hubs[NUM_HUBS];
+};
+
+struct Entrada {
+    int OR;
+    int H1;
+    int H2;
+    int DS;
+    double CUSTO;  // CUSTO como double para valores decimais
+};
+
+struct Dados {
+    int n;
+    int p;
+    double FO;
+    std::vector<int> HUBS;
+    std::vector<Entrada> entradas;
 };
 
 double matrizDistancias[NUM_NOS][NUM_NOS];
