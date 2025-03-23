@@ -98,16 +98,15 @@ void selecionarHubs(int hubsSelecionados[]) {
 //
 void calcularMatrizDeDistancias() {
     for (int i = 0; i < numNos; ++i) {
-        for (int j = i; j < numNos; ++j) {
-            double d = sqrt(pow(nos[i].x - nos[j].x, 2) + pow(nos[i].y - nos[j].y, 2));
-            printf("Calculando matriz de distâncias:\n");
-            matrizDistancias[i][j] = d;
-            printf("IJ: %d\n", matrizDistancias[i][j]);
-            matrizDistancias[j][i] = d;
-            printf("JI: %d\n", matrizDistancias[j][i]);
+        for (int j = i + 1; j < numNos; ++j) { // Começa de i + 1
+            double dx = nos[i].x - nos[j].x;
+            double dy = nos[i].y - nos[j].y;
+            double d = sqrt(dx * dx + dy * dy);
+            matrizDistancias[i][j] = matrizDistancias[j][i] = d;
         }
     }
 }
+
 
 //
 // Função: imprimirMatriz
@@ -289,9 +288,9 @@ Dados lerResultados(const string& nomeArquivo) {
 //
 // Função: main
 //
-int main() {
 
-    string nomeArquivoEntrada = "inst20.txt"; // O arquivo de entrada deve conter: número de nós e, em seguida, as coordenadas
+int main() {
+    string nomeArquivoEntrada = "inst20.txt"; // O arquivo de entrada deve conter: número de nós e as coordenadas
     
     // Ler os dados do arquivo de entrada
     lerArquivoEntrada(nomeArquivoEntrada);
@@ -301,23 +300,28 @@ int main() {
 
     // Criar um array para armazenar os hubs selecionados
     int hubsSelecionados[MAX_HUBS];
-
     memset(hubsSelecionados, 0, sizeof(hubsSelecionados));
-    
+
+    // Inicia a medição do tempo com alta precisão
     auto start = high_resolution_clock::now();
 
-    // Selecioanr os hubs
+    // Selecionar os hubs
     selecionarHubs(hubsSelecionados);
 
     // Calcular a função objetivo
     double FO = calculoFO(hubsSelecionados);
-    auto stop = high_resolution_clock::now();
-    auto duration = duration_cast<microseconds>(stop - start);
-    cout << "Execution Time (Hub Selection and FO Calculation): " 
-         << duration.count() << " microseconds" << endl;
 
-    //imprimirMatriz();
+    // Finaliza a medição do tempo
+    auto stop = high_resolution_clock::now();
     
+    // Mede a duração em nanosegundos para maior precisão
+    auto duration_ns = duration_cast<nanoseconds>(stop - start);
+    
+    cout << "Execution Time (Hub Selection and FO Calculation): " 
+         << duration_ns.count() << " nanoseconds" << endl;
+
+    // Salvar os resultados
     salvarResultados("resultados.txt", hubsSelecionados, FO);
     
+    return 0;
 }
