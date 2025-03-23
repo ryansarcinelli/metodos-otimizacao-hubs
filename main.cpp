@@ -1,13 +1,17 @@
 #include "main.h"
 #include <chrono>
 #include <cstring>
+#include <vector>
+#include <algorithm>
+#include <random>
+#include <cfloat>
 
 using namespace std;
 using namespace chrono;
 
 // Definição das variáveis globais
-int numNos = 0;
-int numHubs = 5;  // Número de hubs definido estaticamente (pode ser ajustado)
+int numNos = 20;
+int numHubs = 2;  // Número de hubs definido estaticamente (pode ser ajustado)
 Node nos[MAX_NOS];
 double matrizDistancias[MAX_NOS][MAX_NOS];
 
@@ -37,52 +41,54 @@ void lerArquivoEntrada(const string& nomeArquivo) {
     arquivo.close();
 }
 
-//
-// Função: calcularCentro
-// Calcula o centro geométrico dos nós
-//
-Node calcularCentro() {
-    double somaX = 0.0, somaY = 0.0;
-    for (int i = 0; i < numNos; ++i) {
-        somaX += nos[i].x;
-        somaY += nos[i].y;
-    }
-    Node centro;
-    centro.x = somaX / numNos;
-    centro.y = somaY / numNos;
-    return centro;
-}
+struct Candidato
+{
+    double maxDistMin;  // Menor entre as maiores distâncias
+    int index;
+};
 
-//
-// Função: selecionarHubs
-// Seleciona hubs com base na distância ao centro (metade dos mais próximos e metade dos mais distantes)
-//
+
 void selecionarHubs(int hubsSelecionados[]) {
-    // Estrutura auxiliar para armazenar o par (distância, índice)
-    struct Par {
-        double dist;
-        int index;
-    };
-    Par distancias[MAX_NOS];
-    
-    Node centro = calcularCentro();
+    vector<Candidato> candidatos;
+
+    // Inicializar a semente do gerador de números aleatórios apenas uma vez
+    static bool seeded = false;
+    if (!seeded) {
+        srand((unsigned)time(NULL));
+        seeded = true;
+    }
+
+    // Calcular a maior distância mínima para cada nó
     for (int i = 0; i < numNos; ++i) {
-        double d = sqrt(pow(nos[i].x - centro.x, 2) + pow(nos[i].y - centro.y, 2));
-        distancias[i].dist = d;
-        distancias[i].index = i;
+        double maxDist = 0.0;
+        for (int j = 0; j < numNos; ++j) {
+            if (i != j) {
+                maxDist = max(maxDist, matrizDistancias[i][j]);
+            }
+        }
+        candidatos.push_back({maxDist, i});
     }
-    
-    // Ordena o array de distâncias
-    sort(distancias, distancias + numNos, [](const Par& a, const Par& b) {
-        return a.dist < b.dist;
+
+    // Ordenar os nós pelos menores valores de "maior distância"
+    sort(candidatos.begin(), candidatos.end(), [](const Candidato& a, const Candidato& b) {
+        return a.maxDistMin < b.maxDistMin;
     });
-    
-    int metade = numHubs / 2;
-    for (int i = 0; i < metade; i++) {
-        hubsSelecionados[i] = distancias[i].index;
-    }
-    for (int i = metade; i < numHubs; i++) {
-        hubsSelecionados[i] = distancias[numNos - 1 - (i - metade)].index;
+
+    // Selecionar aleatoriamente dentro do top %tal melhores candidatos
+    double beta = 0.2;
+    int limite = max(1, static_cast<int>(beta * numNos));
+
+    for (int i = 0; i < numHubs; i++) {
+        int escolhido = rand() % limite;  // Escolhe um índice dentro do top %tal melhores
+        hubsSelecionados[i] = candidatos[escolhido].index;
+
+        // Remover o escolhido da lista para evitar repetições
+        candidatos.erase(candidatos.begin() + escolhido);
+
+        // Ajustar o limite para evitar estouro
+        if (!candidatos.empty()) {
+            limite = max(1, static_cast<int>(beta * candidatos.size()));
+        }
     }
 }
 
@@ -94,8 +100,11 @@ void calcularMatrizDeDistancias() {
     for (int i = 0; i < numNos; ++i) {
         for (int j = i; j < numNos; ++j) {
             double d = sqrt(pow(nos[i].x - nos[j].x, 2) + pow(nos[i].y - nos[j].y, 2));
+            printf("Calculando matriz de distâncias:\n");
             matrizDistancias[i][j] = d;
+            printf("IJ: %d\n", matrizDistancias[i][j]);
             matrizDistancias[j][i] = d;
+            printf("JI: %d\n", matrizDistancias[j][i]);
         }
     }
 }
@@ -119,22 +128,42 @@ void imprimirMatriz() {
 // Calcula a função objetivo (FO) utilizando a matriz pré-computada e os hubs selecionados
 //
 double calculoFO(const int hubsSelecionados[]) {
+    if (numHubs <= 0 || hubsSelecionados == nullptr)
+    {
+        return -1;  
+    }
+    
     const double alpha = 0.75;
     double maxCost = 0.0;
+
     for (int i = 0; i < numNos; ++i) {
         for (int j = i + 1; j < numNos; ++j) {
-            double minCost = numeric_limits<double>::max();
+            double minCost = DBL_MAX;
+
             for (int k = 0; k < numHubs; ++k) {
+                int hubK = hubsSelecionados[k];
+
+                // Verifica se o índice do hub está dentro dos limites da matriz
+                if (hubK < 0 || hubK >= numNos) continue;
+
                 for (int l = 0; l < numHubs; ++l) {
-                    double cost = matrizDistancias[i][hubsSelecionados[k]] +
-                                  alpha * matrizDistancias[hubsSelecionados[k]][hubsSelecionados[l]] +
-                                  matrizDistancias[hubsSelecionados[l]][j];
-                    if (cost < minCost)
+                    int hubL = hubsSelecionados[l];
+
+                    if (hubL < 0 || hubL >= numNos) continue;
+
+                    double cost = matrizDistancias[i][hubK] +
+                                  alpha * matrizDistancias[hubK][hubL] +
+                                  matrizDistancias[hubL][j];
+
+                    if (cost < minCost){
                         minCost = cost;
+                    }
                 }
             }
-            if (minCost > maxCost)
+
+            if (minCost > maxCost){
                 maxCost = minCost;
+            }
         }
     }
     return maxCost;
@@ -164,6 +193,8 @@ void criarArquivoDeSaida(const string& nomeArquivo) {
 // Salva os resultados (nós, hubs, FO e tabela de custos) em um arquivo
 //
 void salvarResultados(const string &nomeArquivo, const int hubsSelecionados[], double FO) {
+    criarArquivoDeSaida(nomeArquivo);
+
     ofstream arquivo(nomeArquivo);
     if (!arquivo.is_open()){
         cerr << "Erro ao abrir o arquivo para escrita: " << nomeArquivo << endl;
@@ -261,22 +292,32 @@ Dados lerResultados(const string& nomeArquivo) {
 int main() {
 
     string nomeArquivoEntrada = "inst20.txt"; // O arquivo de entrada deve conter: número de nós e, em seguida, as coordenadas
+    
+    // Ler os dados do arquivo de entrada
     lerArquivoEntrada(nomeArquivoEntrada);
     
+    // Calcular a matriz de distâncias
     calcularMatrizDeDistancias();
-    
+
+    // Criar um array para armazenar os hubs selecionados
     int hubsSelecionados[MAX_HUBS];
+
     memset(hubsSelecionados, 0, sizeof(hubsSelecionados));
     
     auto start = high_resolution_clock::now();
+
+    // Selecioanr os hubs
     selecionarHubs(hubsSelecionados);
+
+    // Calcular a função objetivo
     double FO = calculoFO(hubsSelecionados);
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<microseconds>(stop - start);
     cout << "Execution Time (Hub Selection and FO Calculation): " 
          << duration.count() << " microseconds" << endl;
+
+    //imprimirMatriz();
     
-    criarArquivoDeSaida("saida.txt");
     salvarResultados("resultados.txt", hubsSelecionados, FO);
     
 }
