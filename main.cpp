@@ -41,6 +41,10 @@ void lerArquivoEntrada(const string& nomeArquivo) {
     arquivo.close();
 }
 
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
 struct Candidato
 {
     double maxDistMin;  // Menor entre as maiores distâncias
