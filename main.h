@@ -3,71 +3,69 @@
 
 #include <iostream>
 #include <fstream>
-#include <array>
-#include <string>
 #include <iomanip>
 #include <cmath>
 #include <limits>
 #include <cstdlib>
-#include <ctime>
 #include <chrono>
 #include <algorithm>
+#include <sstream>
 #include <cstring>
 
 using namespace std;
-using namespace chrono;
 
-extern const int MAX_HUBS;
-extern const int NUM_NOS = 200;
-extern const int NUM_HUBS = 50;
-int MAX_SOLUCOES = 1000;
-int hubs[NUM_HUBS];
+#define MAX_NOS 1000    // Número máximo de nós permitidos
+#define MAX_HUBS 100    // Capacidade máxima para hubs
 
+// O número efetivo de hubs é parametrizado no código (ex.: 4 hubs)
+extern int numNos;   // Número de nós lido da instância
+extern int numHubs;  // Número de hubs (definido estaticamente no código)
+
+// Estrutura para representar um nó
 struct Node {
-    double x, y;
-    long double dist;
+    double x;
+    double y;
 };
 
+// Estrutura para representar uma solução
 struct Solucao {
     double FO;
-    int hubs[NUM_HUBS];
+    int hubs[MAX_HUBS];
 };
 
+// Estrutura para uma entrada na tabela de resultados
 struct Entrada {
     int OR;
     int H1;
     int H2;
     int DS;
-    double CUSTO;  // CUSTO como double para valores decimais
+    double custo;
 };
 
+// Estrutura para armazenar os dados lidos de um arquivo de resultados
+// Para simplificar, usamos um array estático para as entradas.
 struct Dados {
     int n;
     int p;
     double FO;
-    std::vector<int> HUBS;
-    std::vector<Entrada> entradas;
+    int hubs[MAX_HUBS];
+    int numEntradas;
+    Entrada entradas[MAX_NOS * MAX_NOS];
 };
 
-double matrizDistancias[NUM_NOS][NUM_NOS];
-Node nos[NUM_NOS];
+// Arrays globais (vetores estáticos)
+extern Node nos[MAX_NOS];
+extern double matrizDistancias[MAX_NOS][MAX_NOS];
 
-
-Solucao sol;
-extern double matrizDistancias[NUM_NOS][NUM_NOS];
-extern Node nos[NUM_NOS];
-
-Solucao clonarSolucao(const Solucao& solucaoOriginal);
+// Declaração das funções
 void lerArquivoEntrada(const string& nomeArquivo);
-long double calcularDistancia(const Node& a, const Node& b);
-void criarArquivoDeSaida();
+void criarArquivoDeSaida(const string& nomeArquivo);
 Node calcularCentro();
-void selecionarHubs();
-void heuristicaConstrutiva();
+void selecionarHubs(int hubsSelecionados[]);
 void calcularMatrizDeDistancias();
 void imprimirMatriz();
-void printHubs(int* hubs, int NUM_HUBS);
-long double calculoFOmat();
-
+double calculoFO(const int hubsSelecionados[]);
+void salvarResultados(const string &nomeArquivo, const int hubsSelecionados[], double FO);
+Dados lerResultados(const string& nomeArquivo);
 
 #endif // MAIN_H

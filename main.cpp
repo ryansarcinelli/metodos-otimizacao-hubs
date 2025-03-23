@@ -1,294 +1,282 @@
-#include <iostream>
-#include <fstream>
-#include <array>
-#include <string>
-#include <iomanip>
-#include <cmath>
-#include <limits>
-#include <cstdlib>
-#include <ctime>
-#include <chrono>
-#include <algorithm>
-#include <cstring>
-#include <vector>
-#include <sstream>
-
 #include "main.h"
-
-#define MAX(X,Y) ((X > Y) ? X : Y)
-#define MIN(X,Y) ((X < Y) ? X : Y)
+#include <chrono>
+#include <cstring>
 
 using namespace std;
 using namespace chrono;
 
-Solucao clonarSolucao(const Solucao& solucaoOriginal) {
-    Solucao novaSolucao;
-    novaSolucao.FO = solucaoOriginal.FO;
-    memcpy(novaSolucao.hubs, solucaoOriginal.hubs, sizeof(solucaoOriginal.hubs));
-    return novaSolucao;
-}
+// Definição das variáveis globais
+int numNos = 0;
+int numHubs = 5;  // Número de hubs definido estaticamente (pode ser ajustado)
+Node nos[MAX_NOS];
+double matrizDistancias[MAX_NOS][MAX_NOS];
 
+//
+// Função: lerArquivoEntrada
+// Formato do arquivo de entrada:
+// Linha 1: <número de nós>
+// Linhas seguintes: <coordenada x> <coordenada y>
+//
 void lerArquivoEntrada(const string& nomeArquivo) {
-
     ifstream arquivo(nomeArquivo);
-    if (!arquivo.is_open()) exit(1);
-
-    int NUM_NOS;
-    arquivo >> NUM_NOS;
-    for (int i = 0; i < NUM_NOS; ++i) {
-        arquivo >> nos[i].x >> nos[i].y;
-    }
-
-    arquivo.close();
-}
-
-long double calcularDistancia(const Node& a, const Node& b) {
-    return sqrt(pow(a.x - b.x, 2) + pow(a.y - b.y, 2));
-}
-
-void criarArquivoDeSaida() {
-    ofstream arquivo("saida.txt");
-    if (!arquivo.is_open()) exit(1);
-
-     arquivo << NUM_NOS << endl;
-
-    arquivo << std::fixed << std::setprecision(6);
-     for (int i = 0; i <= NUM_NOS; ++i) {
-         arquivo << nos[i].x << " " << nos[i].y << endl;
-     }
-     arquivo.close();
-}
-
-Node calcularCentro() {
-    double somaX = 0.0, somaY = 0.0;
-    
-    for (int i = 0; i < NUM_NOS; ++i) {
-        somaX += nos[i].x;
-        somaY += nos[i].y;
-    }
-    
-    return {somaX / NUM_NOS, somaY / NUM_NOS};
-}
-
-void selecionarHubs() {
-    
-    Node centro = calcularCentro();
-
-    std::pair<double, int> distancias[NUM_NOS];
-
-    for (int i = 0; i < NUM_NOS; ++i) {
-        double distanciaCentro = calcularDistancia(nos[i], centro);
-        distancias[i] = {distanciaCentro, i};
-    }
-
-    std::sort(distancias, distancias + NUM_NOS);
-
-    for (int i = 0; i < NUM_HUBS / 2; ++i) {
-        hubs[i] = distancias[i].second; 
-    }
-    for (int i = NUM_HUBS / 2; i < NUM_HUBS; ++i) {
-        hubs[i] = distancias[NUM_NOS - 1 - (i - NUM_HUBS / 2)].second; 
-    }
-}
-
-void calcularMatrizDeDistancias() {
-    memset(matrizDistancias, 0, sizeof(matrizDistancias));
-    for (int i = 0; i <= NUM_NOS; ++i) {
-        for (int j = i + 1; j < NUM_NOS; ++j) { 
-            matrizDistancias[i][j] = calcularDistancia(nos[i], nos[j]);
-            matrizDistancias[j][i] = matrizDistancias[i][j];
-        }
-    }
-}
-
-void imprimirMatriz() {
-    std::cout << std::fixed << std::setprecision(6);
-
-    for (int i = 0; i < NUM_NOS; ++i) {
-        for (int j = 0; j < NUM_NOS; ++j) {
-            std::cout << matrizDistancias[i][j] << " ";
-        }
-        std::cout << std::endl;
-    }
-}
-
-void printHubs(int* hubs, int NUM_HUBS) {
-    std::cout << "Hubs selecionados: ";
-    for (int i = 0; i < NUM_HUBS; i++) {
-        std::cout << hubs[i] << " ";
-    }
-    std::cout << std::endl;
-}
-
-long double calculoFOmat() {
-    const double alpha = 0.75;
-    long double maxCost = 0.0;
-
-    for (int i = 0; i < NUM_NOS; ++i) {
-        for (int j = i + 1; j < NUM_NOS; ++j) {
-            long double minCost = std::numeric_limits<long double>::max();
-            for (int k = 0; k < NUM_HUBS; ++k) {
-                for (int l = 0; l < NUM_HUBS; ++l) {
-                    long double cost = matrizDistancias[i][hubs[k]] + 
-                                       alpha * matrizDistancias[hubs[k]][hubs[l]] + 
-                                       matrizDistancias[hubs[l]][j];
-
-                    
-                    minCost = MIN(minCost, cost);  
-                }
-            }
-            maxCost = MAX(maxCost, minCost);  // Equivalente ao std::max
-        }
-    }
-    
-    return maxCost;
-}
-
-void salvarResultados(const std::string &nomeArquivo, int n, int p, double FO, const int hubsSelecionados[]) {
-    std::ofstream arquivo(nomeArquivo);
-    if (!arquivo.is_open()) {
-        std::cerr << "Erro ao abrir o arquivo para escrita: " << nomeArquivo << std::endl;
+    if (!arquivo.is_open()){
+        cerr << "Erro ao abrir o arquivo de entrada." << endl;
         exit(1);
     }
     
-    arquivo << "n: " << n << " p: " << p << "\n";
+    // Lê somente o número de nós, pois o arquivo não traz o número de hubs
+    arquivo >> numNos;
+    if(numNos > MAX_NOS){
+        cerr << "Erro: número de nós excede o limite máximo (" << MAX_NOS << ")." << endl;
+        exit(1);
+    }
     
-    std::stringstream ss;
-    ss << std::fixed << std::setprecision(2) << FO;
-    std::string foStr = ss.str();
-    for (char &c : foStr) if (c == '.') c = ',';
-    arquivo << "FO: " << foStr << "\n";
+    for (int i = 0; i < numNos; ++i) {
+        arquivo >> nos[i].x >> nos[i].y;
+    }
+    arquivo.close();
+}
+
+//
+// Função: calcularCentro
+// Calcula o centro geométrico dos nós
+//
+Node calcularCentro() {
+    double somaX = 0.0, somaY = 0.0;
+    for (int i = 0; i < numNos; ++i) {
+        somaX += nos[i].x;
+        somaY += nos[i].y;
+    }
+    Node centro;
+    centro.x = somaX / numNos;
+    centro.y = somaY / numNos;
+    return centro;
+}
+
+//
+// Função: selecionarHubs
+// Seleciona hubs com base na distância ao centro (metade dos mais próximos e metade dos mais distantes)
+//
+void selecionarHubs(int hubsSelecionados[]) {
+    // Estrutura auxiliar para armazenar o par (distância, índice)
+    struct Par {
+        double dist;
+        int index;
+    };
+    Par distancias[MAX_NOS];
     
+    Node centro = calcularCentro();
+    for (int i = 0; i < numNos; ++i) {
+        double d = sqrt(pow(nos[i].x - centro.x, 2) + pow(nos[i].y - centro.y, 2));
+        distancias[i].dist = d;
+        distancias[i].index = i;
+    }
+    
+    // Ordena o array de distâncias
+    sort(distancias, distancias + numNos, [](const Par& a, const Par& b) {
+        return a.dist < b.dist;
+    });
+    
+    int metade = numHubs / 2;
+    for (int i = 0; i < metade; i++) {
+        hubsSelecionados[i] = distancias[i].index;
+    }
+    for (int i = metade; i < numHubs; i++) {
+        hubsSelecionados[i] = distancias[numNos - 1 - (i - metade)].index;
+    }
+}
+
+//
+// Função: calcularMatrizDeDistancias
+// Calcula a matriz de distâncias entre todos os nós
+//
+void calcularMatrizDeDistancias() {
+    for (int i = 0; i < numNos; ++i) {
+        for (int j = i; j < numNos; ++j) {
+            double d = sqrt(pow(nos[i].x - nos[j].x, 2) + pow(nos[i].y - nos[j].y, 2));
+            matrizDistancias[i][j] = d;
+            matrizDistancias[j][i] = d;
+        }
+    }
+}
+
+//
+// Função: imprimirMatriz
+// Imprime a matriz de distâncias
+//
+void imprimirMatriz() {
+    cout << fixed << setprecision(6);
+    for (int i = 0; i < numNos; ++i) {
+        for (int j = 0; j < numNos; ++j) {
+            cout << matrizDistancias[i][j] << " ";
+        }
+        cout << endl;
+    }
+}
+
+//
+// Função: calculoFO
+// Calcula a função objetivo (FO) utilizando a matriz pré-computada e os hubs selecionados
+//
+double calculoFO(const int hubsSelecionados[]) {
+    const double alpha = 0.75;
+    double maxCost = 0.0;
+    for (int i = 0; i < numNos; ++i) {
+        for (int j = i + 1; j < numNos; ++j) {
+            double minCost = numeric_limits<double>::max();
+            for (int k = 0; k < numHubs; ++k) {
+                for (int l = 0; l < numHubs; ++l) {
+                    double cost = matrizDistancias[i][hubsSelecionados[k]] +
+                                  alpha * matrizDistancias[hubsSelecionados[k]][hubsSelecionados[l]] +
+                                  matrizDistancias[hubsSelecionados[l]][j];
+                    if (cost < minCost)
+                        minCost = cost;
+                }
+            }
+            if (minCost > maxCost)
+                maxCost = minCost;
+        }
+    }
+    return maxCost;
+}
+
+//
+// Função: criarArquivoDeSaida
+// Cria um arquivo com os nós (coordenadas)
+//
+void criarArquivoDeSaida(const string& nomeArquivo) {
+    ofstream arquivo(nomeArquivo);
+    if (!arquivo.is_open()){
+        cerr << "Erro ao abrir o arquivo de saída." << endl;
+        exit(1);
+    }
+    
+    arquivo << numNos << "\n";
+    arquivo << fixed << setprecision(6);
+    for (int i = 0; i < numNos; ++i) {
+        arquivo << nos[i].x << " " << nos[i].y << "\n";
+    }
+    arquivo.close();
+}
+
+//
+// Função: salvarResultados
+// Salva os resultados (nós, hubs, FO e tabela de custos) em um arquivo
+//
+void salvarResultados(const string &nomeArquivo, const int hubsSelecionados[], double FO) {
+    ofstream arquivo(nomeArquivo);
+    if (!arquivo.is_open()){
+        cerr << "Erro ao abrir o arquivo para escrita: " << nomeArquivo << endl;
+        exit(1);
+    }
+    
+    arquivo << "n: " << numNos << " p: " << numHubs << "\n";
+    arquivo << fixed << setprecision(2) << "FO: " << FO << "\n";
     arquivo << "HUBS: [";
-    for (int i = 0; i < p; i++) {
-        arquivo << hubsSelecionados[i] << (i < p - 1 ? ", " : "");
+    for (int i = 0; i < numHubs; ++i) {
+        arquivo << hubsSelecionados[i];
+        if(i < numHubs - 1)
+            arquivo << ", ";
     }
     arquivo << "]\n\n";
     
     arquivo << "OR\tH1\tH2\tDS\tCUSTO\n";
     const double alpha = 0.75;
-    
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-            if (i == j) continue; // Remove redundância quando origem e destino são iguais
-            
-            double minCost = std::numeric_limits<double>::max();
+    for (int i = 0; i < numNos; ++i) {
+        for (int j = 0; j < numNos; ++j) {
+            if (i == j) continue;
+            double minCost = numeric_limits<double>::max();
             int bestHub1 = -1, bestHub2 = -1;
-            
-            for (int k = 0; k < p; k++) {
-                for (int l = 0; l < p; l++) {
-                    double custo = calcularDistancia(nos[i], nos[hubsSelecionados[k]]) +
-                                   alpha * calcularDistancia(nos[hubsSelecionados[k]], nos[hubsSelecionados[l]]) +
-                                   calcularDistancia(nos[hubsSelecionados[l]], nos[j]);
-                    
-                    if (custo < minCost) {
+            for (int k = 0; k < numHubs; ++k) {
+                for (int l = 0; l < numHubs; ++l) {
+                    double custo = matrizDistancias[i][hubsSelecionados[k]] +
+                                   alpha * matrizDistancias[hubsSelecionados[k]][hubsSelecionados[l]] +
+                                   matrizDistancias[hubsSelecionados[l]][j];
+                    if(custo < minCost){
                         minCost = custo;
                         bestHub1 = hubsSelecionados[k];
                         bestHub2 = hubsSelecionados[l];
                     }
                 }
             }
-            
-            std::stringstream ssCusto;
-            ssCusto << std::fixed << std::setprecision(2) << minCost;
-            std::string custoStr = ssCusto.str();
-            
-            arquivo << i << "\t" << bestHub1 << "\t" << bestHub2 << "\t" << j << "\t" << custoStr << "\n";
+            arquivo << i << "\t" << bestHub1 << "\t" << bestHub2 << "\t" << j << "\t" 
+                    << fixed << setprecision(2) << minCost << "\n";
         }
     }
-    
     arquivo.close();
 }
 
-Dados lerResultados(const std::string& nomeArquivo) {
+//
+// Função: lerResultados
+// Lê os dados de um arquivo de resultados e os armazena na estrutura Dados
+//
+Dados lerResultados(const string& nomeArquivo) {
     Dados dados;
-    std::ifstream arquivo(nomeArquivo);
-    std::string linha;
-
+    ifstream arquivo(nomeArquivo);
     if (!arquivo) {
-        std::cerr << "Erro ao abrir o arquivo!" << std::endl;
+        cerr << "Erro ao abrir o arquivo: " << nomeArquivo << endl;
         return dados;
     }
-
-    // Lendo n e p
-    std::getline(arquivo, linha);
-    std::sscanf(linha.c_str(), "n: %d p: %d", &dados.n, &dados.p);
-
-    // Lendo FO
-    std::getline(arquivo, linha);
-    std::sscanf(linha.c_str(), "FO: %lf", &dados.FO);
-
-    // Lendo HUBS
-    std::getline(arquivo, linha);
-    linha = linha.substr(linha.find("[") + 1, linha.find("]") - linha.find("[") - 1);
-    std::istringstream fluxoHubs(linha);
-    int hub;
-    while (fluxoHubs >> hub) {
-        dados.HUBS.push_back(hub);
-        if (fluxoHubs.peek() == ',') fluxoHubs.ignore();
+    
+    string linha;
+    getline(arquivo, linha);
+    sscanf(linha.c_str(), "n: %d p: %d", &dados.n, &dados.p);
+    
+    getline(arquivo, linha);
+    sscanf(linha.c_str(), "FO: %lf", &dados.FO);
+    
+    getline(arquivo, linha);
+    size_t pos1 = linha.find("[");
+    size_t pos2 = linha.find("]");
+    string hubsStr = linha.substr(pos1+1, pos2-pos1-1);
+    istringstream iss(hubsStr);
+    for (int i = 0; i < dados.p; i++) {
+        int hub;
+        iss >> hub;
+        dados.hubs[i] = hub;
+        if(iss.peek() == ',')
+            iss.ignore();
     }
-
-    // Ignorar cabeçalho da tabela
-    std::getline(arquivo, linha);
-
-    // Lendo entradas da tabela
-    while (std::getline(arquivo, linha)) {
+    
+    // Pula linha em branco e cabeçalho da tabela
+    getline(arquivo, linha);
+    getline(arquivo, linha);
+    
+    int entradaIndex = 0;
+    while(getline(arquivo, linha)) {
+        if(linha.empty()) continue;
         Entrada entrada;
-        std::istringstream iss(linha);
-        
-        // Lendo a linha da tabela
-        iss >> entrada.OR >> entrada.H1 >> entrada.H2 >> entrada.DS >> entrada.CUSTO;
-
-        // // Verificar se a leitura foi bem-sucedida
-        // if (iss.fail()) {
-        //     std::cerr << "Erro ao ler a linha: " << linha << std::endl;
-        //     continue;  // Ignora a linha com erro
-        // }
-
-        dados.entradas.push_back(entrada);
+        istringstream issLinha(linha);
+        issLinha >> entrada.OR >> entrada.H1 >> entrada.H2 >> entrada.DS >> entrada.custo;
+        dados.entradas[entradaIndex++] = entrada;
     }
-
+    dados.numEntradas = entradaIndex;
     arquivo.close();
     return dados;
 }
 
-
-
+//
+// Função: main
+//
 int main() {
-    std::vector<Solucao> solucoes;
-    string nomeArquivo = "inst200.txt";
-    int numsol=0;
-    lerArquivoEntrada(nomeArquivo);
-    //criarArquivoDeSaida();
-    //printHubs(hubs, NUM_HUBS);
-    //imprimirMatriz();
 
-    auto start1 = high_resolution_clock::now();
-    selecionarHubs();
+    string nomeArquivoEntrada = "inst20.txt"; // O arquivo de entrada deve conter: número de nós e, em seguida, as coordenadas
+    lerArquivoEntrada(nomeArquivoEntrada);
+    
     calcularMatrizDeDistancias();
-    calculoFOmat();
-    auto stop1 = high_resolution_clock::now();
-    auto duration1 = duration_cast<microseconds>(stop1 - start1);
-    std::cout << "Tempo de execução contrutiva e FO 1x: " << duration1.count() << " microsegundos" << std::endl;
-//------------------------------------------------------------
-    auto start2 = high_resolution_clock::now();
-    long double FO = 0.0;
-    for (int i = 0; i < 1000; i++) {
-        calcularMatrizDeDistancias();
-        FO = calculoFOmat();
-    }
-    auto stop2 = high_resolution_clock::now();
-    auto duration2 = duration_cast<microseconds>(stop2 - start2);
-    std::cout << "Tempo de execução FO 1000x: " << duration2.count() << "microsegundos" << std::endl;
-//-------------------------------------------------------------
-    auto start3 = high_resolution_clock::now();
-    for (int i = 0; i < 1000; i++) {
-        selecionarHubs();
-    }
-    auto stop3 = high_resolution_clock::now();
-    auto duration3 = duration_cast<microseconds>(stop3 - start3);
-    std::cout << "Tempo de execução construtiva 1000x: " << duration3.count() << "microsegundos" << std::endl;
-
-    salvarResultados("resultados.txt", NUM_NOS, NUM_HUBS, FO, hubs);
-    return 0;
+    
+    int hubsSelecionados[MAX_HUBS];
+    memset(hubsSelecionados, 0, sizeof(hubsSelecionados));
+    
+    auto start = high_resolution_clock::now();
+    selecionarHubs(hubsSelecionados);
+    double FO = calculoFO(hubsSelecionados);
+    auto stop = high_resolution_clock::now();
+    auto duration = duration_cast<microseconds>(stop - start);
+    cout << "Execution Time (Hub Selection and FO Calculation): " 
+         << duration.count() << " microseconds" << endl;
+    
+    criarArquivoDeSaida("saida.txt");
+    salvarResultados("resultados.txt", hubsSelecionados, FO);
+    
 }
