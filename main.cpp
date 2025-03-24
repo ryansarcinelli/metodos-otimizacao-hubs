@@ -29,7 +29,8 @@ const int Pop = 100;         // tamanho da população
 const int Cro = 20;         // número de cruzamentos por geração
 const double Mut = 0.5;     // taxa de mutação (50%)
 const double eliteRate = 0.1;  // percentual de indivíduos da elite para seleção de crossover
-const int tempo = 0;
+const int TEMPO_MAXIMO = 5;
+
 struct Solucao {
     double fo;
     int hubs[numHubs];
@@ -477,70 +478,121 @@ void mutacao(Individuo &ind) {
 
 // Função principal do algoritmo genético
 Individuo algoritmoGenetico() {
+    const int TEMPO_MAXIMO_MS = 5000; // 5 segundos em milissegundos
     vector<Individuo> populacao(Pop);
+    
     // Inicializa a população
-    for(int i = 0; i < Pop; i++){
+    for(int i = 0; i < Pop; i++) {
         inicializarIndividuo(populacao[i]);
     }
 
     Individuo melhorSolucao = populacao[0];
-    time_t inicio = time(0);
-    // Loop das gerações
-    for(int geracao = 0; geracao < AGmax; geracao++){
-        //Ordena a população (melhor FO = menor)
+    auto inicio = high_resolution_clock::now();
+    int geracao = 0;
+    int ultimoTempoExibido = -1;
+
+    // Loop principal controlado por tempo
+    while(true) {
+        auto agora = high_resolution_clock::now();
+        auto decorrido = duration_cast<milliseconds>(agora - inicio).count();
+        
+        // Verifica se o tempo esgotou
+        if(decorrido >= TEMPO_MAXIMO_MS) {
+            cout << "\nTempo limite de " << TEMPO_MAXIMO_MS/1000 << " segundos atingido." << endl;
+            break;
+        }
+
+        // Ordena a população (melhor FO = menor)
         sort(populacao.begin(), populacao.end(), comparaIndividuo);
 
         // Atualiza a melhor solução
-        if (populacao[0].fitness < melhorSolucao.fitness){
+        if(populacao[0].fitness < melhorSolucao.fitness) {
             melhorSolucao = populacao[0];
         }
 
         vector<Individuo> novosIndividuos;
 
-        // Elite: preserva os melhores indivíduos (20% melhores, atualmente)
+        // Elite: preserva os melhores indivíduos (20% melhores)
         int numElite = max(1, static_cast<int>(eliteRate * Pop));
-        for(int i = 0; i < numElite; i++){
+        for(int i = 0; i < numElite; i++) {
             novosIndividuos.push_back(populacao[i]);
         }
 
-        //Gerar novos indivíduos via crossover
-        for(int i = 0; i < Cro; i++){
-            // Seleciona um pai da elite
+        // Gerar novos indivíduos via crossover
+        for(int i = 0; i < Cro; i++) {
             int indicePai1 = rand() % numElite;
-
-            // Seleciona o outro pai de forma aleatória dentre toda a população
             int indicePai2 = rand() % Pop;
-
             Individuo filho = crossoverMultiponto(populacao[indicePai1], populacao[indicePai2]);
-
-            // Aplica mutação no filho
             mutacao(filho);
-
-            // Adiciona o filho na nova população
             novosIndividuos.push_back(filho);
         }
 
-        // Preenche o restante da nova população com indivíduos escolhidos (poderia se cópia ou seleção aleatória dos que sobraram)
+        // Preenche o restante da população
         while(novosIndividuos.size() < Pop) {
             int idx = rand() % Pop;
             novosIndividuos.push_back(populacao[idx]);
         }
 
-        // Atualiza a população: seleciona os Pop melhore dentre os atuais e os novos (pode-se combinar os 2 vetores)
+        // Atualiza a população
         vector<Individuo> combinados = populacao;
         combinados.insert(combinados.end(), novosIndividuos.begin(), novosIndividuos.end());
-        //sort(combinados.begin(), combinados.begin() + Pop);
         sort(combinados.begin(), combinados.end(), comparaIndividuo);
         populacao.assign(combinados.begin(), combinados.begin() + Pop);
 
+        // Exibe progresso a cada 100ms ou a cada 10 gerações
+        /* int tempoRestante = (TEMPO_MAXIMO_MS - decorrido) / 1000;
+        if(decorrido % 100 == 0 || geracao % 10 == 0 || tempoRestante != ultimoTempoExibido) {
+            cout << "Generation " << geracao << " - Best FO: " << fixed << setprecision(1) << melhorSolucao.fitness
+                 << " - Time remaining: " << tempoRestante << "s" << endl;
+            ultimoTempoExibido = tempoRestante;
+        } */
 
-        // (Opcional) Exibir informações da geração
-        cout << "Generation " << geracao + 1 << " - Best FO: " << populacao[0].fitness << endl;
+        geracao++;
     }
+
+    auto fim = high_resolution_clock::now();
+    auto tempo_total = duration_cast<milliseconds>(fim - inicio);
+
+    cout << "\n=== Resultado Final ===" << endl;
+    cout << "Total generations: " << geracao << endl;
+    cout << "Best FO: " << fixed << setprecision(1) << melhorSolucao.fitness << endl;
+    cout << "Hubs: ";
+    for(int i = 0; i < numHubs; i++) {
+        cout << melhorSolucao.hubs[i] << " ";
+    }
+    cout << "\nTempo total de execução: " << tempo_total.count()/1000.0 << " segundos" << endl;
 
     return melhorSolucao;
 }
 
+int main() {
+    string nomeArquivoEntrada = ARQUIVO_ENTRADA;
+    
+    lerArquivoEntrada(nomeArquivoEntrada);
+    calcularMatrizDeDistancias();
+    vector<Solucao> solucoes;
+
+    auto start = high_resolution_clock::now();
+    
+    // Executar o algoritmo genético
+    Individuo melhor = algoritmoGenetico();
+    
+    auto stop = high_resolution_clock::now();
+    auto duration = duration_cast<seconds>(stop - start);
+    
+    cout << "Best solution found (AG): FO = " << melhor.fitness << "\nHubs: ";
+    for(int i = 0; i < numHubs; i++) {
+        cout << melhor.hubs[i] << " ";
+    }
+    cout << "\nTotal execution time: " << duration.count() << " seconds" << endl;
+    
+    salvarResultados("resultados_AG.txt", melhor.hubs, melhor.fitness);
+    
+    return 0;
+}
+
+
+/*
 int main() {
     string nomeArquivoEntrada = ARQUIVO_ENTRADA; // O arquivo de entrada deve conter: número de nós e as coordenadas
     
@@ -586,4 +638,4 @@ int main() {
     return 0;
 }
 
-
+*/
