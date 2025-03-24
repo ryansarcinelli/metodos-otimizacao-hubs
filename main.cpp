@@ -13,11 +13,15 @@
 
 using namespace std;
 using namespace chrono;
-// Definição das variáveis globais
-int numNos = 0;
-const int numHubs = 5;  
 
-string ARQUIVO_ENTRADA = "inst50.txt";
+// Definição das variáveis globais
+
+int numNos = 0;
+
+// Parâmetros do problema
+const int numHubs = 2;  
+const int TEMPO_MAXIMO = 60;
+string ARQUIVO_ENTRADA = "inst10.txt";
 
 
 Node nos[MAX_NOS];
@@ -29,11 +33,12 @@ const int Pop = 100;         // tamanho da população
 const int Cro = 20;         // número de cruzamentos por geração
 const double Mut = 0.5;     // taxa de mutação (50%)
 const double eliteRate = 0.1;  // percentual de indivíduos da elite para seleção de crossover
-const int TEMPO_MAXIMO = 5;
+
 
 struct Solucao {
     double fo;
     int hubs[numHubs];
+    double tempoMelhorSolucao;  
 };
 
 struct Candidato
@@ -74,13 +79,6 @@ void lerArquivoEntrada(const string& nomeArquivo) {
 
 void selecionarHubs(int hubsSelecionados[]) {
     vector<Candidato> candidatos;
-
-    // Inicializar a semente do gerador de números aleatórios apenas uma vez
-    static bool seeded = false;
-    if (!seeded) {
-        srand((unsigned)time(NULL));
-        seeded = true;
-    }
 
     // Calcular a maior distância mínima para cada nó
     for (int i = 0; i < numNos; ++i) {
@@ -206,7 +204,7 @@ void SalvarSolucao(const std::vector<Solucao>& solucoes, const std::string& nome
     }
 
     for (size_t i = 0; i < solucoes.size(); ++i) {
-        std::string nomeSolucao = "solucao_" + nomeArquivoEntrada + "_" + std::to_string(numHubs) + "hubs.txt";
+        std::string nomeSolucao = "solucao_" + std::to_string(TEMPO_MAXIMO) + "_" + std::to_string(numHubs) + "hubs" + nomeArquivoEntrada;
         arquivo << "Solução: " << nomeSolucao << std::endl;
         arquivo << "Hubs: ";
         
@@ -316,23 +314,8 @@ Solucao lerArquivoSaida(const std::string& nomeArquivo) {
     return solucao;
 }
 
-void criarArquivoDeSaida(const string& nomeArquivo) {
-    ofstream arquivo(nomeArquivo);
-    if (!arquivo.is_open()){
-        cerr << "Erro ao abrir o arquivo de saída." << endl;
-        exit(1);
-    }
-    
-    arquivo << numNos << "\n";
-    arquivo << fixed << setprecision(6);
-    for (int i = 0; i < numNos; ++i) {
-        arquivo << nos[i].x << " " << nos[i].y << "\n";
-    }
-    arquivo.close();
-}
-
 void salvarResultados(const string &nomeArquivo, const int hubsSelecionados[], double FO) {
-    criarArquivoDeSaida(nomeArquivo);
+
 
     ofstream arquivo(nomeArquivo);
     if (!arquivo.is_open()){
@@ -376,51 +359,6 @@ void salvarResultados(const string &nomeArquivo, const int hubsSelecionados[], d
     arquivo.close();
 }
 
-Dados lerResultados(const string& nomeArquivo) {
-    Dados dados;
-    ifstream arquivo(nomeArquivo);
-    if (!arquivo) {
-        cerr << "Erro ao abrir o arquivo: " << nomeArquivo << endl;
-        return dados;
-    }
-    
-    string linha;
-    getline(arquivo, linha);
-    sscanf(linha.c_str(), "n: %d p: %d", &dados.n, &dados.p);
-    
-    getline(arquivo, linha);
-    sscanf(linha.c_str(), "FO: %lf", &dados.FO);
-    
-    getline(arquivo, linha);
-    size_t pos1 = linha.find("[");
-    size_t pos2 = linha.find("]");
-    string hubsStr = linha.substr(pos1+1, pos2-pos1-1);
-    istringstream iss(hubsStr);
-    for (int i = 0; i < dados.p; i++) {
-        int hub;
-        iss >> hub;
-        dados.hubs[i] = hub;
-        if(iss.peek() == ',')
-            iss.ignore();
-    }
-    
-    // Pula linha em branco e cabeçalho da tabela
-    getline(arquivo, linha);
-    getline(arquivo, linha);
-    
-    int entradaIndex = 0;
-    while(getline(arquivo, linha)) {
-        if(linha.empty()) continue;
-        Entrada entrada;
-        istringstream issLinha(linha);
-        issLinha >> entrada.OR >> entrada.H1 >> entrada.H2 >> entrada.DS >> entrada.custo;
-        dados.entradas[entradaIndex++] = entrada;
-    }
-    dados.numEntradas = entradaIndex;
-    arquivo.close();
-    return dados;
-}
-
 void inicializarIndividuo(Individuo &ind) {
     // Inicializa o vetor com zeros
     memset(ind.hubs, 0, sizeof(ind.hubs));
@@ -436,8 +374,6 @@ bool comparaIndividuo(const Individuo &a, const Individuo &b){
     return a.fitness < b.fitness;
 }
 
-// Função para realizar o crossover multiponto entre dois pais
-// Aqui, já que o cromossomo é um vetor de tamanho numHubs, podemos fazer, um crossover de dois pontos
 Individuo crossoverMultiponto(const Individuo &pai1, const Individuo &pai2) {
     Individuo filho = pai1;  // Inicia copiando o pai1
 
@@ -459,7 +395,6 @@ Individuo crossoverMultiponto(const Individuo &pai1, const Individuo &pai2) {
     return filho;
 }
 
-// Função para realizar a mutação em um indivíduo
 void mutacao(Individuo &ind) {
     // para cada gene(hub), com probabilidade Mut, gera um novo valor aleatóro (garantindo que esteja dentro de 0 a numNos-1)
     for(int i = 0; i < numHubs; i++) {
@@ -476,49 +411,46 @@ void mutacao(Individuo &ind) {
     ind.fitness = calculoFO(ind.hubs);
 }
 
-// Função principal do algoritmo genético
 Individuo algoritmoGenetico() {
-    const int TEMPO_MAXIMO_MS = 5000; // 5 segundos em milissegundos
+    const int TEMPO_MAXIMO_MS = TEMPO_MAXIMO * 1000;
     vector<Individuo> populacao(Pop);
+    auto inicio = high_resolution_clock::now();
+    double tempoMelhorFO = 0.0;
     
-    // Inicializa a população
+    // Initialize population
     for(int i = 0; i < Pop; i++) {
         inicializarIndividuo(populacao[i]);
     }
 
     Individuo melhorSolucao = populacao[0];
-    auto inicio = high_resolution_clock::now();
     int geracao = 0;
-    int ultimoTempoExibido = -1;
 
-    // Loop principal controlado por tempo
     while(true) {
         auto agora = high_resolution_clock::now();
         auto decorrido = duration_cast<milliseconds>(agora - inicio).count();
         
-        // Verifica se o tempo esgotou
         if(decorrido >= TEMPO_MAXIMO_MS) {
-            cout << "\nTempo limite de " << TEMPO_MAXIMO_MS/1000 << " segundos atingido." << endl;
+            cout << "\nTempo limite de " << TEMPO_MAXIMO << " segundos atingido." << endl;
             break;
         }
 
-        // Ordena a população (melhor FO = menor)
         sort(populacao.begin(), populacao.end(), comparaIndividuo);
 
-        // Atualiza a melhor solução
+        // Update best solution and record time
         if(populacao[0].fitness < melhorSolucao.fitness) {
             melhorSolucao = populacao[0];
+            tempoMelhorFO = duration_cast<duration<double>>(agora - inicio).count();
         }
 
         vector<Individuo> novosIndividuos;
-
-        // Elite: preserva os melhores indivíduos (20% melhores)
         int numElite = max(1, static_cast<int>(eliteRate * Pop));
+        
+        // Elitism
         for(int i = 0; i < numElite; i++) {
             novosIndividuos.push_back(populacao[i]);
         }
 
-        // Gerar novos indivíduos via crossover
+        // Crossover
         for(int i = 0; i < Cro; i++) {
             int indicePai1 = rand() % numElite;
             int indicePai2 = rand() % Pop;
@@ -527,25 +459,17 @@ Individuo algoritmoGenetico() {
             novosIndividuos.push_back(filho);
         }
 
-        // Preenche o restante da população
+        // Fill remaining population
         while(novosIndividuos.size() < Pop) {
             int idx = rand() % Pop;
             novosIndividuos.push_back(populacao[idx]);
         }
 
-        // Atualiza a população
+        // Update population
         vector<Individuo> combinados = populacao;
         combinados.insert(combinados.end(), novosIndividuos.begin(), novosIndividuos.end());
         sort(combinados.begin(), combinados.end(), comparaIndividuo);
         populacao.assign(combinados.begin(), combinados.begin() + Pop);
-
-        // Exibe progresso a cada 100ms ou a cada 10 gerações
-        /* int tempoRestante = (TEMPO_MAXIMO_MS - decorrido) / 1000;
-        if(decorrido % 100 == 0 || geracao % 10 == 0 || tempoRestante != ultimoTempoExibido) {
-            cout << "Generation " << geracao << " - Best FO: " << fixed << setprecision(1) << melhorSolucao.fitness
-                 << " - Time remaining: " << tempoRestante << "s" << endl;
-            ultimoTempoExibido = tempoRestante;
-        } */
 
         geracao++;
     }
@@ -554,8 +478,10 @@ Individuo algoritmoGenetico() {
     auto tempo_total = duration_cast<milliseconds>(fim - inicio);
 
     cout << "\n=== Resultado Final ===" << endl;
+    
     cout << "Total generations: " << geracao << endl;
     cout << "Best FO: " << fixed << setprecision(1) << melhorSolucao.fitness << endl;
+    cout << "Found at: " << fixed << setprecision(2) << tempoMelhorFO << " segundos" << endl;
     cout << "Hubs: ";
     for(int i = 0; i < numHubs; i++) {
         cout << melhorSolucao.hubs[i] << " ";
@@ -566,25 +492,22 @@ Individuo algoritmoGenetico() {
 }
 
 int main() {
+    unsigned int seed = time(0);
+    srand(seed); // Configura o gerador de números aleatórios
     string nomeArquivoEntrada = ARQUIVO_ENTRADA;
     
     lerArquivoEntrada(nomeArquivoEntrada);
     calcularMatrizDeDistancias();
     vector<Solucao> solucoes;
-
+    cout << "solucao_" << TEMPO_MAXIMO << "s_" << numHubs << "hubs_" << nomeArquivoEntrada << endl;
     auto start = high_resolution_clock::now();
-    
+
     // Executar o algoritmo genético
     Individuo melhor = algoritmoGenetico();
     
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<seconds>(stop - start);
     
-    cout << "Best solution found (AG): FO = " << melhor.fitness << "\nHubs: ";
-    for(int i = 0; i < numHubs; i++) {
-        cout << melhor.hubs[i] << " ";
-    }
-    cout << "\nTotal execution time: " << duration.count() << " seconds" << endl;
     
     salvarResultados("resultados_AG.txt", melhor.hubs, melhor.fitness);
     
