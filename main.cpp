@@ -14,8 +14,11 @@
 using namespace std;
 using namespace chrono;
 // Definição das variáveis globais
-int numNos = 100;
-int numHubs = 4;  
+int numNos = 0;
+const int numHubs = 5;  
+
+string ARQUIVO_ENTRADA = "inst20.txt";
+
 
 Node nos[MAX_NOS];
 double matrizDistancias[MAX_NOS][MAX_NOS];
@@ -27,15 +30,27 @@ const int Cro = 20;         // número de cruzamentos por geração
 const double Mut = 0.5;     // taxa de mutação (50%)
 const double eliteRate = 0.1;  // percentual de indivíduos da elite para seleção de crossover
 
+struct Solucao {
+    double fo;
+    int hubs[numHubs];
+};
 
-string ARQUIVO_ENTRADA = "inst" + to_string(numNos) + ".txt";
+struct Candidato
+{
+    double maxDistMin;  // Menor entre as maiores distâncias
+    int index;
+};
 
-//
-// Função: lerArquivoEntrada
-// Formato do arquivo de entrada:
-// Linha 1: <número de nós>
-// Linhas seguintes: <coordenada x> <coordenada y>
-//
+struct Individuo {
+    int hubs[MAX_HUBS];
+    double fitness;
+
+    // Sobrecarga do operador < para comparação com base no fitness
+    bool operator<(const Individuo &outro) const {
+        return fitness < outro.fitness;
+    }
+};
+
 void lerArquivoEntrada(const string& nomeArquivo) {
     ifstream arquivo(nomeArquivo);
     if (!arquivo.is_open()){
@@ -55,13 +70,6 @@ void lerArquivoEntrada(const string& nomeArquivo) {
     }
     arquivo.close();
 }
-
-struct Candidato
-{
-    double maxDistMin;  // Menor entre as maiores distâncias
-    int index;
-};
-
 
 void selecionarHubs(int hubsSelecionados[]) {
     vector<Candidato> candidatos;
@@ -107,10 +115,6 @@ void selecionarHubs(int hubsSelecionados[]) {
     }
 }
 
-//
-// Função: calcularMatrizDeDistancias
-// Calcula a matriz de distâncias entre todos os nós
-//
 void calcularMatrizDeDistancias() {
     for (int i = 0; i < numNos; ++i) {
         for (int j = i ; j < numNos; ++j) { // Começa de i + 1
@@ -122,11 +126,6 @@ void calcularMatrizDeDistancias() {
     }
 }
 
-
-//
-// Função: imprimirMatriz
-// Imprime a matriz de distâncias
-//
 void imprimirMatriz() {
     cout << fixed << setprecision(6);
     for (int i = 0; i < numNos; ++i) {
@@ -137,10 +136,6 @@ void imprimirMatriz() {
     }
 }
 
-//
-// Função: calculoFO
-// Calcula a função objetivo (FO) utilizando a matriz pré-computada e os hubs selecionados
-//
 double calculoFO(const int hubsSelecionados[]) {
     if (numHubs <= 0 || hubsSelecionados == nullptr) {
         printf("Erro: numHubs <= 0 ou hubsSelecionados == nullptr\n");
@@ -188,10 +183,80 @@ double calculoFO(const int hubsSelecionados[]) {
     return maxCost;
 }
 
-//
-// Função: criarArquivoDeSaida
-// Cria um arquivo com os nós (coordenadas)
-//
+Solucao clonarSolucao(Individuo &ind) {
+    Solucao sol;
+
+    for (int i = 0; i < numHubs; i++) {
+        sol.hubs[i] = ind.hubs[i];  // Copia os hubs do indivíduo para a solução
+    }
+    
+    sol.fo = ind.fitness;  // Copia a função objetivo
+
+    return sol;
+}
+
+void SalvarSolucao(const std::vector<Solucao>& solucoes, const std::string& nomeArquivoEntrada, int numHubs) {
+    std::string nomeArquivo = "solucoes.txt"; // Nome fixo para armazenar todas as soluções
+    std::ofstream arquivo(nomeArquivo, std::ios::trunc); // Abre o arquivo em modo de sobrescrita
+
+    if (!arquivo.is_open()) {
+        std::cerr << "Erro ao abrir o arquivo para salvar soluções." << std::endl;
+        return;
+    }
+
+    for (size_t i = 0; i < solucoes.size(); ++i) {
+        std::string nomeSolucao = "solucao_" + nomeArquivoEntrada + "_" + std::to_string(numHubs) + "hubs.txt";
+        arquivo << "Solução: " << nomeSolucao << std::endl;
+        arquivo << "Hubs: ";
+        
+        for (int hub : solucoes[i].hubs) {
+            arquivo << hub << " ";
+        }
+        
+        arquivo << "\nFO: " << solucoes[i].fo << "\n\n";
+    }
+
+    arquivo.close();
+    std::cout << "Soluções salvas em " << nomeArquivo << " (sobrescrito)" << std::endl;
+}
+
+void CarregarSolucoes(std::vector<Solucao>& solucoes) {
+    std::string nomeArquivo = "solucoes.txt"; // Nome fixo do arquivo
+
+    std::ifstream arquivo(nomeArquivo);
+    if (!arquivo.is_open()) {
+        std::cerr << "Erro ao abrir o arquivo: " << nomeArquivo << std::endl;
+        return;
+    }
+
+    std::string linha;
+    Solucao sol;
+    int hubIndex = 0;
+
+    while (std::getline(arquivo, linha)) {
+        if (linha.rfind("Solução:", 0) == 0) {
+            // Nova solução detectada, reinicializar os índices
+            hubIndex = 0;
+        } 
+        else if (linha.rfind("Hubs:", 0) == 0) {
+            // Lendo os hubs e armazenando no array fixo
+            std::istringstream iss(linha.substr(5)); // Ignora "Hubs:"
+            int hub;
+            while (iss >> hub && hubIndex < numHubs) {
+                sol.hubs[hubIndex++] = hub;
+            }
+        } 
+        else if (linha.rfind("FO:", 0) == 0) {
+            // Lendo a função objetivo
+            sol.fo = std::stod(linha.substr(3)); // Ignora "FO:"
+            solucoes.push_back(sol); // Adiciona a solução ao vetor
+        }
+    }
+
+    arquivo.close();
+    std::cout << "Soluções carregadas de: " << nomeArquivo << std::endl;
+}
+
 void criarArquivoDeSaida(const string& nomeArquivo) {
     ofstream arquivo(nomeArquivo);
     if (!arquivo.is_open()){
@@ -207,10 +272,6 @@ void criarArquivoDeSaida(const string& nomeArquivo) {
     arquivo.close();
 }
 
-//
-// Função: salvarResultados
-// Salva os resultados (nós, hubs, FO e tabela de custos) em um arquivo
-//
 void salvarResultados(const string &nomeArquivo, const int hubsSelecionados[], double FO) {
     criarArquivoDeSaida(nomeArquivo);
 
@@ -256,10 +317,6 @@ void salvarResultados(const string &nomeArquivo, const int hubsSelecionados[], d
     arquivo.close();
 }
 
-//
-// Função: lerResultados
-// Lê os dados de um arquivo de resultados e os armazena na estrutura Dados
-//
 Dados lerResultados(const string& nomeArquivo) {
     Dados dados;
     ifstream arquivo(nomeArquivo);
@@ -305,18 +362,6 @@ Dados lerResultados(const string& nomeArquivo) {
     return dados;
 }
 
-//Estrutura que representa um indivíduo (solução)
-struct Individuo {
-    int hubs[MAX_HUBS];
-    double fitness;
-
-    // Sobrecarga do operador < para comparação com base no fitness
-    bool operator<(const Individuo &outro) const {
-        return fitness < outro.fitness;
-    }
-};
-
-// Função para inicializar um indivíduo usando a função aleatória gulosa
 void inicializarIndividuo(Individuo &ind) {
     // Inicializa o vetor com zeros
     memset(ind.hubs, 0, sizeof(ind.hubs));
@@ -328,7 +373,6 @@ void inicializarIndividuo(Individuo &ind) {
     ind.fitness = calculoFO(ind.hubs);
 }
 
-// Função de comparação para ordenação (menor FO = melhor)
 bool comparaIndividuo(const Individuo &a, const Individuo &b){
     return a.fitness < b.fitness;
 }
@@ -439,9 +483,6 @@ Individuo algoritmoGenetico() {
     return melhorSolucao;
 }
 
-//
-// Função: main
-//
 int main() {
     string nomeArquivoEntrada = ARQUIVO_ENTRADA; // O arquivo de entrada deve conter: número de nós e as coordenadas
     
@@ -450,7 +491,10 @@ int main() {
     
     // Calcular a matriz de distâncias
     calcularMatrizDeDistancias();
-    
+    vector<Solucao> solucoes;
+
+
+    // ---------------------------- pode tirar isso
     // === Heurística Construtiva (Gulosa) ===
     int hubsConstructive[MAX_HUBS];
     memset(hubsConstructive, 0, sizeof(hubsConstructive));
@@ -461,13 +505,27 @@ int main() {
     
     // Salvar os resultados da construtiva em "resultados.txt"
     salvarResultados("resultados.txt", hubsConstructive, FOConstructive);
-    
+    // ---------------------------- pode tirar isso
+
+
     // === Algoritmo Genético (AG) ===
     auto start = high_resolution_clock::now();
     
     // Executar o algoritmo genético para encontrar a melhor solução
     Individuo melhor = algoritmoGenetico();
-    
+    CarregarSolucoes(solucoes);
+    Solucao melhorsolucao=clonarSolucao(melhor);
+    solucoes.push_back(melhorsolucao);
+    SalvarSolucao(solucoes, nomeArquivoEntrada, numHubs);
+
+    //aqui printa o vector Solucoes
+    for (size_t i = 0; i < solucoes.size(); ++i) {
+        cout << "Solução " << i << ": FO = " << solucoes[i].fo << "\nHubs: ";
+        for (int j = 0; j < numHubs; j++) {
+            cout << solucoes[i].hubs[j] << " ";
+        }
+        cout << endl;
+    }
     auto stop = high_resolution_clock::now();
     auto duration_us = duration_cast<microseconds>(stop - start);
     

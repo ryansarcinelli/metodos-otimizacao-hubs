@@ -1,0 +1,8 @@
+Solução: solucao_inst20.txt_5hubs.txt
+Hubs: 4 15 3 41 40 
+FO: 50707.9
+
+Solução: solucao_inst20.txt_5hubs.txt
+Hubs: 5 16 0 19 3 
+FO: 37868.1
+

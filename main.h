@@ -18,8 +18,6 @@ using namespace std;
 #define MAX_HUBS 100    // Capacidade máxima para hubs
 
 // O número efetivo de hubs é parametrizado no código (ex.: 4 hubs)
-extern int numNos;   // Número de nós lido da instância
-extern int numHubs;  // Número de hubs (definido estaticamente no código)
 
 // Estrutura para representar um nó
 struct Node {
@@ -28,10 +26,6 @@ struct Node {
 };
 
 // Estrutura para representar uma solução
-struct Solucao {
-    double FO;
-    int hubs[MAX_HUBS];
-};
 
 // Estrutura para uma entrada na tabela de resultados
 struct Entrada {
