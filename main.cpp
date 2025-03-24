@@ -14,10 +14,19 @@
 using namespace std;
 using namespace chrono;
 // Definição das variáveis globais
-int numNos = 20;
-int numHubs = 3;  // Número de hubs definido estaticamente (pode ser ajustado)
+int numNos = 100;
+int numHubs = 4;  
+
 Node nos[MAX_NOS];
 double matrizDistancias[MAX_NOS][MAX_NOS];
+
+// Parâmetros do Algoritmo Genético
+const int AGmax = 100;      // número máximo de gerações
+const int Pop = 100;         // tamanho da população
+const int Cro = 20;         // número de cruzamentos por geração
+const double Mut = 0.5;     // taxa de mutação (50%)
+const double eliteRate = 0.1;  // percentual de indivíduos da elite para seleção de crossover
+
 
 string ARQUIVO_ENTRADA = "inst" + to_string(numNos) + ".txt";
 
@@ -104,7 +113,7 @@ void selecionarHubs(int hubsSelecionados[]) {
 //
 void calcularMatrizDeDistancias() {
     for (int i = 0; i < numNos; ++i) {
-        for (int j = i + 1; j < numNos; ++j) { // Começa de i + 1
+        for (int j = i ; j < numNos; ++j) { // Começa de i + 1
             double dx = nos[i].x - nos[j].x;
             double dy = nos[i].y - nos[j].y;
             double d = sqrt(dx * dx + dy * dy);
@@ -133,44 +142,49 @@ void imprimirMatriz() {
 // Calcula a função objetivo (FO) utilizando a matriz pré-computada e os hubs selecionados
 //
 double calculoFO(const int hubsSelecionados[]) {
-    if (numHubs <= 0 || hubsSelecionados == nullptr)
-    {
-        return -1;  
+    if (numHubs <= 0 || hubsSelecionados == nullptr) {
+        printf("Erro: numHubs <= 0 ou hubsSelecionados == nullptr\n");
+        return -1;
     }
     
     const double alpha = 0.75;
     double maxCost = 0.0;
+    
+    //printf("Iniciando calculoFO\n");
 
     for (int i = 0; i < numNos; ++i) {
-        for (int j = i + 1; j < numNos; ++j) {
+        for (int j = i; j < numNos; ++j) { // j inicia em i+1, logo i==j nunca ocorre
             double minCost = DBL_MAX;
+            //printf("\nAnalisando par de nós (%d, %d)\n", i, j);
 
             for (int k = 0; k < numHubs; ++k) {
                 int hubK = hubsSelecionados[k];
-
-                // Verifica se o índice do hub está dentro dos limites da matriz
                 if (hubK < 0 || hubK >= numNos) continue;
 
                 for (int l = 0; l < numHubs; ++l) {
                     int hubL = hubsSelecionados[l];
-
                     if (hubL < 0 || hubL >= numNos) continue;
-
-                    double cost = matrizDistancias[i][hubK] +
-                                  alpha * matrizDistancias[hubK][hubL] +
-                                  matrizDistancias[hubL][j];
-
-                    if (cost < minCost){
+                    
+                    double alphaCost = alpha * matrizDistancias[hubK][hubL];
+                    double cost = matrizDistancias[i][hubK] + alphaCost + matrizDistancias[hubL][j];
+                    
+                    //printf("  Hubs (%d, %d) -> Custo: %lf\n", hubK, hubL, cost);
+                    
+                    if (cost < minCost) {
                         minCost = cost;
+                        //printf("  Novo minCost para (%d, %d): %lf\n", i, j, minCost);
                     }
                 }
             }
-
-            if (minCost > maxCost){
+            
+            if (minCost > maxCost) {
                 maxCost = minCost;
+                //printf("Atualizando maxCost: %lf\n", maxCost);
             }
         }
     }
+    
+    //printf("Finalizado calculoFO. maxCost = %lf\n", maxCost);
     return maxCost;
 }
 
@@ -290,14 +304,6 @@ Dados lerResultados(const string& nomeArquivo) {
     arquivo.close();
     return dados;
 }
-
-// Parâmetros do Algoritmo Genético
-const int AGmax = 100;      // número máximo de gerações
-const int Pop = 50;         // tamanho da população
-const int Cro = 20;         // número de cruzamentos por geração
-const double Mut = 0.2;     // taxa de mutação (10%)
-const double eliteRate = 0.2;  // percentual de indivíduos da elite para seleção de crossover
-
 
 //Estrutura que representa um indivíduo (solução)
 struct Individuo {
@@ -463,13 +469,13 @@ int main() {
     Individuo melhor = algoritmoGenetico();
     
     auto stop = high_resolution_clock::now();
-    auto duration_ns = duration_cast<nanoseconds>(stop - start);
+    auto duration_us = duration_cast<microseconds>(stop - start);
     
     cout << "Best solution found (AG): FO = " << melhor.fitness << "\nHubs: ";
     for (int i = 0; i < numHubs; i++) {
         cout << melhor.hubs[i] << " ";
     }
-    cout << "\nExecution Time (AG): " << duration_ns.count() << " nanoseconds" << endl;
+    cout << "\nExecution Time (AG): " << duration_us.count() << " microseconds" << endl;
     
     // Salvar os resultados do AG em "resultados_AG.txt"
     salvarResultados("resultados_AG.txt", melhor.hubs, melhor.fitness);
