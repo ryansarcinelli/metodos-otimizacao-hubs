@@ -17,7 +17,7 @@ using namespace chrono;
 int numNos = 0;
 const int numHubs = 5;  
 
-string ARQUIVO_ENTRADA = "inst20.txt";
+string ARQUIVO_ENTRADA = "inst50.txt";
 
 
 Node nos[MAX_NOS];
@@ -29,7 +29,7 @@ const int Pop = 100;         // tamanho da população
 const int Cro = 20;         // número de cruzamentos por geração
 const double Mut = 0.5;     // taxa de mutação (50%)
 const double eliteRate = 0.1;  // percentual de indivíduos da elite para seleção de crossover
-
+const int tempo = 0;
 struct Solucao {
     double fo;
     int hubs[numHubs];
@@ -257,6 +257,64 @@ void CarregarSolucoes(std::vector<Solucao>& solucoes) {
     std::cout << "Soluções carregadas de: " << nomeArquivo << std::endl;
 }
 
+Solucao lerArquivoSaida(const std::string& nomeArquivo) {
+    std::ifstream arquivo(nomeArquivo);
+    Solucao solucao = {0, {0}}; // Initialize all fields
+    std::string linha;
+
+    if (!arquivo.is_open()) {
+        std::cerr << "Erro ao abrir o arquivo " << nomeArquivo << std::endl;
+        return solucao;
+    }
+
+    // Ignore first line
+    if (!std::getline(arquivo, linha)) {
+        std::cerr << "Arquivo vazio ou erro de leitura" << std::endl;
+        return solucao;
+    }
+
+    // Read FO from second line
+    if (!std::getline(arquivo, linha) || linha.substr(0, 4) != "FO: ") {
+        std::cerr << "Formato inválido para linha FO" << std::endl;
+        return solucao;
+    }
+    std::istringstream(linha.substr(4)) >> solucao.fo;
+
+    // Read hubs from third line
+    if (!std::getline(arquivo, linha)) {
+        std::cerr << "Não foi possível ler linha de hubs" << std::endl;
+        return solucao;
+    }
+
+    size_t inicio = linha.find('[');
+    size_t fim = linha.find(']');
+
+    if (inicio == std::string::npos || fim == std::string::npos || fim <= inicio) {
+        std::cerr << "Formato inválido para lista de hubs" << std::endl;
+        return solucao;
+    }
+
+    std::istringstream stream(linha.substr(inicio + 1, fim - inicio - 1));
+    std::string hub;
+    int i = 0;
+    
+    while (i < numHubs && std::getline(stream, hub, ',')) {
+        try {
+            solucao.hubs[i++] = std::stoi(hub);
+        } catch (const std::exception& e) {
+            std::cerr << "Erro ao converter hub: " << e.what() << std::endl;
+            solucao.hubs[i++] = -1; // or some error value
+        }
+    }
+
+    // Check if we read exactly numHubs
+    if (i != numHubs) {
+        std::cerr << "Aviso: número de hubs lidos (" << i << ") diferente de numHubs (" << numHubs << ")" << std::endl;
+    }
+
+    return solucao;
+}
+
 void criarArquivoDeSaida(const string& nomeArquivo) {
     ofstream arquivo(nomeArquivo);
     if (!arquivo.is_open()){
@@ -426,7 +484,7 @@ Individuo algoritmoGenetico() {
     }
 
     Individuo melhorSolucao = populacao[0];
-
+    time_t inicio = time(0);
     // Loop das gerações
     for(int geracao = 0; geracao < AGmax; geracao++){
         //Ordena a população (melhor FO = menor)
@@ -494,28 +552,15 @@ int main() {
     vector<Solucao> solucoes;
 
 
-    // ---------------------------- pode tirar isso
-    // === Heurística Construtiva (Gulosa) ===
-    int hubsConstructive[MAX_HUBS];
-    memset(hubsConstructive, 0, sizeof(hubsConstructive));
-    
-    // Seleciona os hubs utilizando a heurística construtiva
-    selecionarHubs(hubsConstructive);
-    double FOConstructive = calculoFO(hubsConstructive);
-    
-    // Salvar os resultados da construtiva em "resultados.txt"
-    salvarResultados("resultados.txt", hubsConstructive, FOConstructive);
-    // ---------------------------- pode tirar isso
-
-
     // === Algoritmo Genético (AG) ===
     auto start = high_resolution_clock::now();
-    
+    Solucao antigo = lerArquivoSaida("resultados_AG.txt");
+    solucoes.push_back(antigo);
     // Executar o algoritmo genético para encontrar a melhor solução
     Individuo melhor = algoritmoGenetico();
-    CarregarSolucoes(solucoes);
-    Solucao melhorsolucao=clonarSolucao(melhor);
-    solucoes.push_back(melhorsolucao);
+    //CarregarSolucoes(solucoes);
+    //Solucao melhorsolucao=clonarSolucao(melhor);
+    //solucoes.push_back(melhorsolucao);
     SalvarSolucao(solucoes, nomeArquivoEntrada, numHubs);
 
     //aqui printa o vector Solucoes
