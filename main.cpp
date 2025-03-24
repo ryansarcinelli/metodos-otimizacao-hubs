@@ -480,7 +480,7 @@ Individuo algoritmoGenetico() {
     cout << "\n=== Resultado Final ===" << endl;
     
     cout << "Total generations: " << geracao << endl;
-    cout << "Best FO: " << fixed << setprecision(1) << melhorSolucao.fitness << endl;
+    cout << "Best FO: " << fixed << setprecision(2) << melhorSolucao.fitness << endl;
     cout << "Found at: " << fixed << setprecision(2) << tempoMelhorFO << " segundos" << endl;
     cout << "Hubs: ";
     for(int i = 0; i < numHubs; i++) {
