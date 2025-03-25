@@ -411,47 +411,121 @@ void mutacao(Individuo &ind) {
     ind.fitness = calculoFO(ind.hubs);
 }
 
-Individuo algoritmoGenetico() {
-    const int TEMPO_MAXIMO_MS = TEMPO_MAXIMO * 1000;
-    vector<Individuo> populacao(Pop);
-    auto inicio = high_resolution_clock::now();
-    double tempoMelhorFO = 0.0;
+// Individuo algoritmoGenetico() {
+//     const int TEMPO_MAXIMO_MS = TEMPO_MAXIMO * 1000;
+//     vector<Individuo> populacao(Pop);
+//     auto inicio = high_resolution_clock::now();
+//     double tempoMelhorFO = 0.0;
     
-    // Initialize population
-    for(int i = 0; i < Pop; i++) {
+//     // Initialize population
+//     for(int i = 0; i < Pop; i++) {
+//         inicializarIndividuo(populacao[i]);
+//     }
+
+//     Individuo melhorSolucao = populacao[0];
+//     int geracao = 0;
+
+//     while(true) {
+//         auto agora = high_resolution_clock::now();
+//         auto decorrido = duration_cast<milliseconds>(agora - inicio).count();
+        
+//         if(decorrido >= TEMPO_MAXIMO_MS) {
+//             cout << "\nTempo limite de " << TEMPO_MAXIMO << " segundos atingido." << endl;
+//             break;
+//         }
+
+//         sort(populacao.begin(), populacao.end(), comparaIndividuo);
+
+//         // Update best solution and record time
+//         if(populacao[0].fitness < melhorSolucao.fitness) {
+//             melhorSolucao = populacao[0];
+//             tempoMelhorFO = duration_cast<duration<double>>(agora - inicio).count();
+//         }
+
+//         vector<Individuo> novosIndividuos;
+//         int numElite = max(1, static_cast<int>(eliteRate * Pop));
+        
+//         // Elitism
+//         for(int i = 0; i < numElite; i++) {
+//             novosIndividuos.push_back(populacao[i]);
+//         }
+
+//         // Crossover
+//         for(int i = 0; i < Cro; i++) {
+//             int indicePai1 = rand() % numElite;
+//             int indicePai2 = rand() % Pop;
+//             Individuo filho = crossoverMultiponto(populacao[indicePai1], populacao[indicePai2]);
+//             mutacao(filho);
+//             novosIndividuos.push_back(filho);
+//         }
+
+//         // Fill remaining population
+//         while(novosIndividuos.size() < Pop) {
+//             int idx = rand() % Pop;
+//             novosIndividuos.push_back(populacao[idx]);
+//         }
+
+//         // Update population
+//         vector<Individuo> combinados = populacao;
+//         combinados.insert(combinados.end(), novosIndividuos.begin(), novosIndividuos.end());
+//         sort(combinados.begin(), combinados.end(), comparaIndividuo);
+//         populacao.assign(combinados.begin(), combinados.begin() + Pop);
+
+//         geracao++;
+//     }
+
+//     auto fim = high_resolution_clock::now();
+//     auto tempo_total = duration_cast<milliseconds>(fim - inicio);
+
+//     cout << "\n=== Resultado Final ===" << endl;
+    
+//     cout << "Total generations: " << geracao << endl;
+//     cout << "Best FO: " << fixed << setprecision(2) << melhorSolucao.fitness << endl;
+//     cout << "Found at: " << fixed << setprecision(2) << tempoMelhorFO << " segundos" << endl;
+//     cout << "Hubs: ";
+//     for(int i = 0; i < numHubs; i++) {
+//         cout << melhorSolucao.hubs[i] << " ";
+//     }
+//     cout << "\nTempo total de execução: " << tempo_total.count()/1000.0 << " segundos" << endl;
+
+//     return melhorSolucao;
+// }
+
+// ALGORITMO GENÉTICO SEM LIMITE DE TEMPO
+Individuo algoritmoGenetico() {
+    vector<Individuo> populacao(Pop);
+    double tempoMelhorFO = 0.0;
+    auto inicio = high_resolution_clock::now();
+    
+    // Inicializa a população
+    for (int i = 0; i < Pop; i++) {
         inicializarIndividuo(populacao[i]);
     }
 
     Individuo melhorSolucao = populacao[0];
     int geracao = 0;
 
-    while(true) {
-        auto agora = high_resolution_clock::now();
-        auto decorrido = duration_cast<milliseconds>(agora - inicio).count();
-        
-        if(decorrido >= TEMPO_MAXIMO_MS) {
-            cout << "\nTempo limite de " << TEMPO_MAXIMO << " segundos atingido." << endl;
-            break;
-        }
-
+    // Loop baseado no número máximo de gerações
+    while(geracao < AGmax) {
         sort(populacao.begin(), populacao.end(), comparaIndividuo);
 
-        // Update best solution and record time
-        if(populacao[0].fitness < melhorSolucao.fitness) {
+        // Atualiza a melhor solução e registra o tempo dela
+        if (populacao[0].fitness < melhorSolucao.fitness) {
             melhorSolucao = populacao[0];
+            auto agora = high_resolution_clock::now();
             tempoMelhorFO = duration_cast<duration<double>>(agora - inicio).count();
         }
 
         vector<Individuo> novosIndividuos;
         int numElite = max(1, static_cast<int>(eliteRate * Pop));
         
-        // Elitism
-        for(int i = 0; i < numElite; i++) {
+        // Elitismo
+        for (int i = 0; i < numElite; i++) {
             novosIndividuos.push_back(populacao[i]);
         }
 
         // Crossover
-        for(int i = 0; i < Cro; i++) {
+        for (int i = 0; i < Cro; i++) {
             int indicePai1 = rand() % numElite;
             int indicePai2 = rand() % Pop;
             Individuo filho = crossoverMultiponto(populacao[indicePai1], populacao[indicePai2]);
@@ -459,13 +533,13 @@ Individuo algoritmoGenetico() {
             novosIndividuos.push_back(filho);
         }
 
-        // Fill remaining population
-        while(novosIndividuos.size() < Pop) {
+        // Completa a população restante
+        while (novosIndividuos.size() < Pop) {
             int idx = rand() % Pop;
             novosIndividuos.push_back(populacao[idx]);
         }
 
-        // Update population
+        // Atualiza a população
         vector<Individuo> combinados = populacao;
         combinados.insert(combinados.end(), novosIndividuos.begin(), novosIndividuos.end());
         sort(combinados.begin(), combinados.end(), comparaIndividuo);
@@ -477,19 +551,19 @@ Individuo algoritmoGenetico() {
     auto fim = high_resolution_clock::now();
     auto tempo_total = duration_cast<milliseconds>(fim - inicio);
 
-    cout << "\n=== Resultado Final ===" << endl;
-    
-    cout << "Total generations: " << geracao << endl;
+    cout << "\n=== Final Result ===" << endl;
+    cout << "Generations (Total): " << geracao << endl;
     cout << "Best FO: " << fixed << setprecision(2) << melhorSolucao.fitness << endl;
-    cout << "Found at: " << fixed << setprecision(2) << tempoMelhorFO << " segundos" << endl;
+    cout << "Find at: " << fixed << setprecision(2) << tempoMelhorFO << " segundos" << endl;
     cout << "Hubs: ";
-    for(int i = 0; i < numHubs; i++) {
+    for (int i = 0; i < numHubs; i++) {
         cout << melhorSolucao.hubs[i] << " ";
     }
-    cout << "\nTempo total de execução: " << tempo_total.count()/1000.0 << " segundos" << endl;
+    cout << "\nExecution Time: " << tempo_total.count()/1000.0 << " seconds" << endl;
 
     return melhorSolucao;
 }
+
 
 int main() {
     unsigned int seed = time(0);
