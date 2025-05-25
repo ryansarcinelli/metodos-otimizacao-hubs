@@ -18,8 +18,6 @@ using namespace std;
 #define MAX_HUBS 100    // Capacidade máxima para hubs
 
 // O número efetivo de hubs é parametrizado no código (ex.: 4 hubs)
-extern int numNos;   // Número de nós lido da instância
-extern int numHubs;  // Número de hubs (definido estaticamente no código)
 
 // Estrutura para representar um nó
 struct Node {
@@ -28,10 +26,6 @@ struct Node {
 };
 
 // Estrutura para representar uma solução
-struct Solucao {
-    double FO;
-    int hubs[MAX_HUBS];
-};
 
 // Estrutura para uma entrada na tabela de resultados
 struct Entrada {
@@ -44,14 +38,7 @@ struct Entrada {
 
 // Estrutura para armazenar os dados lidos de um arquivo de resultados
 // Para simplificar, usamos um array estático para as entradas.
-struct Dados {
-    int n;
-    int p;
-    double FO;
-    int hubs[MAX_HUBS];
-    int numEntradas;
-    Entrada entradas[MAX_NOS * MAX_NOS];
-};
+
 
 // Arrays globais (vetores estáticos)
 extern Node nos[MAX_NOS];
@@ -66,6 +53,5 @@ void calcularMatrizDeDistancias();
 void imprimirMatriz();
 double calculoFO(const int hubsSelecionados[]);
 void salvarResultados(const string &nomeArquivo, const int hubsSelecionados[], double FO);
-Dados lerResultados(const string& nomeArquivo);
 
 #endif // MAIN_H
