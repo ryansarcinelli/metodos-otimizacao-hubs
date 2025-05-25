@@ -77,6 +77,17 @@ void lerArquivoEntrada(const string& nomeArquivo) {
     arquivo.close();
 }
 
+
+
+
+struct Candidato
+{
+    double maxDistMin;  // Menor entre as maiores distâncias
+    int index;
+};
+
+
+
 void selecionarHubs(int hubsSelecionados[]) {
     vector<Candidato> candidatos;
 
